@@ -9,10 +9,10 @@ __all__ = [
 class Modelv1(nn.Module):
     # Network Architecture is exactly same as in infoGAN (https://arxiv.org/abs/1606.03657)
     # Architecture : (64)4c2s-(128)4c2s_BL-FC1024_BL-FC1_S
-    def __init__(self, input_dim=1, input_size=32, classes=2):
+    def __init__(self, input_dim=1, input_size=32, output_dim=1):
         super().__init__()
         self.input_dim = input_dim
-        self.output_dim = classes
+        self.output_dim = output_dim
         self.input_size = input_size
 
         self.conv = nn.Sequential(
@@ -28,7 +28,7 @@ class Modelv1(nn.Module):
             nn.BatchNorm1d(1024),
             nn.LeakyReLU(0.2),
             nn.Linear(1024, self.output_dim),
-            # nn.Sigmoid(),
+            nn.Sigmoid() if output_dim == 1 else nn.Softmax(),
         )
         utils.initialize_weights(self)
 
