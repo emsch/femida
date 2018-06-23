@@ -50,6 +50,7 @@ class LogFile(object):
     def write(self, buffer):
         with open(self.path, 'a') as f:
             f.write(buffer)
+            f.write('\n')
         print(buffer)
 
 
