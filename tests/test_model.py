@@ -1,12 +1,14 @@
 import torch
 import pytest
-from femida_detect.detect import Modelv1
+import itertools
+from femida_detect.detect import select
 
 
 @pytest.mark.parametrize(
-    [20, 28, 30]
+    ['size', 'v'],
+    itertools.product([20, 28, 30], ['v1', 'v2', 'v3'])
 )
-def test_modelv1(size):
+def test_model(size, v):
     inp = torch.rand(10, 3, size, size)
-    out = Modelv1(3, size)(inp)
+    out = select[v](3, size)(inp)
     assert out.shape == (10, 1)
