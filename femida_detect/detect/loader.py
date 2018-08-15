@@ -82,4 +82,3 @@ def data_loader(root, batch_size=64, shuffle=True, augment=False, shape=28, paug
 
 if __name__ == '__main__':
     img = dataset('../../data/train', augment=True)[0]
-
