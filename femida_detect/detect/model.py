@@ -4,6 +4,7 @@ from . import utils
 __all__ = [
     'Modelv1',
     'Modelv2',
+    'Modelv3',
     'select'
 ]
 
