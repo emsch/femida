@@ -1,7 +1,11 @@
 import pytest
 import os
 import cv2
-
+import torch
+from femida_detect.detect import select
+from femida_detect.imgparse import (
+    crop_image, CroppedAnswers
+)
 
 pytest_plugins = ['helpers_namespace']
 
@@ -35,3 +39,26 @@ def save_image(array, *to):
         os.path.join(dest, to[-1]),
         array
     )
+
+
+@pytest.fixture('module')
+def cropped(jpg):
+    return crop_image(cv2.imread(jpg))
+
+
+@pytest.fixture('module')
+def cropped_answers(cropped):
+    return CroppedAnswers(cropped)
+
+
+@pytest.fixture('module')
+def model():
+    net = select['v3'](3, 28)
+    src = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        'data', 'model', 'model_v3.t7'
+    )
+    net.load_state_dict(torch.load(src, map_location='cpu'), strict=False)
+    for p in net.parameters():
+        p.requires_grad = False
+    return net.eval()

@@ -2,36 +2,44 @@ import cv2
 import numpy as np
 import json
 import functools
+import collections
 from pyzbar import pyzbar
 import itertools
 
 from .utils import listit
 
 
-BORDER_LEFT, BORDER_RIGHT = (
-    np.array([1001.05364189, 1140.30542526, 1279.14998283, 1419.51725082,
-              1559.92500267, 1703.37992821, 1962.73085518, 2108.28859329,
-              2253.78823833, 2398.27252483, 2543.75992908, 2687.42875385]),
-    np.array([1119.95232735, 1258.48413773, 1398.24998055, 1538.33389664,
-              1679.02499733, 1822.78003273, 2081.88634453, 2227.74712448,
-              2372.72135639, 2517.4570406,  2663.21084728, 2806.73113384])
-)
-BORDER_TOP, BORDER_BOTTOM = (
-    np.array([117.07986768,  262.0833257,   406.66667048,  551.08331553,
-              696.61630789,  841.62500191,  988.26667436,  1134.61490504,
-              1278.74997139, 1424.70830472, 1570.14406967, 1715.04166921,
-              1860.08333524, 2003.87500127, 2147.95829391, 2294.20823479,
-              2440.94248358, 2589.62494087, 2736.86812528, 2881.99990145]),
-    np.array([232.93112373,  377.99998728,  522.49999619,  667.16664378,
-              813.08647124,  958.37499809,  1105.2069788,  1250.93129857,
-              1395.41663424, 1541.20830091, 1686.43419774, 1830.95833079,
-              1975.91666476, 2120.0416654,  2263.37495804, 2409.6248951,
-              2557.37034194, 2705.20827039, 2852.98624484, 2998.16656176])
-)
+BORDER_LEFT = np.array([
+    1001.05364189, 1140.30542526, 1279.14998283, 1419.51725082,
+    1559.92500267, 1703.37992821, 1962.73085518, 2108.28859329,
+    2253.78823833, 2398.27252483, 2543.75992908, 2687.42875385
+])
+BORDER_RIGHT = BORDER_LEFT + 119.08159110083334
+
+BORDER_TOP = np.array([
+    117.07986768,  262.0833257,   406.66667048,  551.08331553,
+    696.61630789,  841.62500191,  988.26667436,  1134.61490504,
+    1278.74997139, 1424.70830472, 1570.14406967, 1715.04166921,
+    1860.08333524, 2003.87500127, 2147.95829391, 2294.20823479,
+    2440.94248358, 2589.62494087, 2736.86812528, 2881.99990145
+])
+BORDER_BOTTOM = BORDER_TOP + 116.13320818099999
+
 LABELS = ('A', 'B', 'C', 'D', 'E', 'F')
 QUESTIONS = tuple(range(1, 41))
 WIDTH = 3000
 HEIGHT = int(WIDTH * 578 / 403)
+Box = collections.namedtuple('Box', 'center,delta,angle')
+
+
+def box_to_slice(box):
+    box = cv2.boxPoints(box)
+    box = np.int0(box)
+    xmin = min(box, key=lambda x: x[0])[0]
+    xmax = max(box, key=lambda x: x[0])[0]
+    ymin = min(box, key=lambda x: x[1])[1]
+    ymax = max(box, key=lambda x: x[1])[1]
+    return slice(ymin, ymax), slice(xmin, xmax)
 
 
 @functools.lru_cache(1)
@@ -46,7 +54,7 @@ def _get_small_rectangles_positions_middle():
     for i, j in itertools.product(range(xc.shape[0]), range(xc.shape[1])):
         question = QUESTIONS[i + (len(QUESTIONS)//2) * (j // len(LABELS))]
         label = labels[j % len(LABELS)]
-        box = (question, label), ((yc[i, j], xc[i, j]), (dy[i, j], dx[i, j]), 0.)
+        box = (question, label), Box((yc[i, j], xc[i, j]), (dy[i, j], dx[i, j]), 0.)
         result.append(box)
     return tuple(result)
 
@@ -186,3 +194,14 @@ class CroppedAnswers(object):
             box = np.int0(box)
             cv2.drawContours(image, [box], -1, (0, 0, 255), 4)
         return image
+
+    def get_rectangles_array(self, resize=None):
+        res = []
+        img = cv2.cvtColor(self.cropped, cv2.COLOR_BGR2RGB)
+        for box in RECTANGLES_POSITIONS_MIDDLE.values():
+            if resize is not None:
+                res.append(cv2.resize(img[box_to_slice(box)],
+                                      (resize, resize)))
+            else:
+                res.append(img[box_to_slice(box)])
+        return (np.stack(res).transpose(0, 3, 1, 2)/255.).astype(np.float32)
