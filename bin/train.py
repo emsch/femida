@@ -1,86 +1,67 @@
 #!/usr/bin/env python3
 
-import argparse
-import pathlib
 import os
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import json
+import sys
+import pathlib
+import exman
 from femida_detect.detect import select, data_loader
 
 
-def str2bool(v):
-    if v.lower() in ('yes', 'true', 't', 'y', '1'):
-        return True
-    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
-        return False
-    else:
-        raise argparse.ArgumentTypeError('Boolean value expected.')
-
-
-parser = argparse.ArgumentParser('Training for detection model')
+parser = exman.ExParser('Training for detection model', root=os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        '..', 'exman'
+    ))
 parser.add_argument('--paug', type=float, default=.5, help='Augmentation probability')
 parser.add_argument('--imgsize', type=int, default=28, help='Image (Size x Size)')
-parser.add_argument('--data-dir', type=pathlib.Path, help='Data directory')
+parser.add_argument('--data-dir', type=pathlib.Path, help='Data directory', default='./data/')
 parser.add_argument('--epoches', '-e', type=int, default=30, help='Number of epoches')
 parser.add_argument('--lr', type=float, default=.001, help='Initial learning rate')
 parser.add_argument('--batch-size', type=int, default=64, help='Batch size')
-parser.add_argument('--save-dir', type=pathlib.Path, default='results', help='Directory for results')
 parser.add_argument('--log-every', type=int, default=10, help='Log frequency (batches)')
-parser.add_argument('--augment', type=str2bool, default=True, help='Augmentation for training')
+parser.add_argument('--augment', type=bool, default=True, help='Augmentation for training')
 parser.add_argument('--beta1', type=float, default=0.5)
 parser.add_argument('--beta2', type=float, default=0.999)
-parser.add_argument('--gpu', type=str2bool, default=True)
+parser.add_argument('--gpu', type=bool, default=True)
 parser.add_argument('--name', type=str, help='Name for experiment')
 parser.add_argument('--threads', type=int, default=16, help='Data Loading Threads')
-parser.add_argument('-v', type=str, help='Model Version')
+parser.add_argument('-v', type=str, help='Model Version', required=True)
 parser.add_argument('-a', type=str, default=1, help='Aug Version')
-parser.add_argument('--opt', type=str, choices=('adam', 'sgd'), help='Model Optimizer')
+parser.add_argument('--opt', type=str, choices=('adam', 'sgd'), help='Model Optimizer', default='adam')
 parser.add_argument('--wd', type=float, default=0.005, help='Weight decay')
 parser.add_argument('--seed', type=int, default=42, help='Random seed')
+parser.register_validator(lambda args: args.epoches >= 1)
+parser.register_validator(lambda args: args.batch_size >= 1)
 
 
-class LogFile(object):
-    def __init__(self, path):
-        self.path = path
-        if os.path.exists(path):
-            os.unlink(path)
+class TeeStream(object):
+    def __init__(self, stream, path):
+        self.stream = stream
+        self.tee = open(path, 'w')
 
     def write(self, buffer):
-        with open(self.path, 'a') as f:
-            f.write(buffer)
-            f.write('\n')
-        print(buffer)
+        self.tee.write(buffer)
+        self.stream.write(buffer)
+
+    def flush(self):
+        self.tee.flush()
+        self.stream.flush()
 
 
 def check_args(args):
-    # --save_dir
-    args.save_dir = args.save_dir / args.name
-    if not os.path.exists(args.save_dir):
-        os.makedirs(args.save_dir)
-
-    args.model_dir = args.save_dir / 'model'
-    # --result_dir
-    if not os.path.exists(args.model_dir):
-        os.makedirs(args.model_dir)
-
-    args.log_dir = args.save_dir / 'logs'
-    # --result_dir
-    if not os.path.exists(args.log_dir):
-        os.makedirs(args.log_dir)
-
-    # --epoch
-    if not args.epoches >= 1:
-        raise ValueError('#epoches should be >= 1')
-    # --batch_size
-    if not args.batch_size >= 1:
-        raise ValueError('batch-size should be >= 1')
-    with open(args.log_dir / 'params.json', 'w') as f:
-        j = dict((k, str(v)) for k, v in args.__dict__.items())
-        json.dump(j, f)
-
+    args.model_dir = os.path.join(args.root, 'models')
+    os.makedirs(args.model_dir, exist_ok=True)
+    args.log_dir = os.path.join(args.root, 'logs')
+    os.makedirs(args.log_dir, exist_ok=True)
+    sys.stderr = TeeStream(sys.stderr, os.path.join(args.log_dir, 'err'))
+    sys.stdout = TeeStream(sys.stderr, os.path.join(args.log_dir, 'out'))
     return args
+
+
+LOG_TEMPLATE = 'e[{perc:.2f}/{e}/{total}]\tloss={loss:.3f}\tacc={acc:.4f}'
+LOG_TEMPLATE_VAL = '\nVALIDATION e[{e}/{total}]\tloss={loss:.3f}\tacc={acc:.4f}\n'
 
 
 def main():
@@ -123,9 +104,6 @@ def main():
         model.cuda()
         bce_loss.cuda()
     best_acc = -float('inf')
-    LOG_TEMPLATE = 'e[{perc:.2f}/{e}/{total}]\tloss={loss:.3f}\tacc={acc:.4f}'
-    LOG_TEMPLATE_VAL = '\nVALIDATION e[{e}/{total}]\tloss={loss:.3f}\tacc={acc:.4f}\n'
-    logfile = LogFile(args.log_dir/'log.txt')
 
     def train_once(e):
         model.train()
@@ -138,7 +116,7 @@ def main():
             ce.backward()
             optimizer.step()
             if i % args.log_every == 0:
-                logfile.write(LOG_TEMPLATE.format(
+                print(LOG_TEMPLATE.format(
                     perc=i/len(train_loader),
                     e=e+1,
                     total=args.epoches,
@@ -157,7 +135,7 @@ def main():
                 correct += ((yh.view(-1) > .5).long() == y).float().sum().item()
                 total += X.shape[0]
         ret = dict(acc=correct/total, bce=loss/total, e=e)
-        logfile.write(LOG_TEMPLATE_VAL.format(
+        print(LOG_TEMPLATE_VAL.format(
             e=e+1,
             total=args.epoches,
             loss=ret['bce'],
@@ -171,12 +149,12 @@ def main():
         if evals['acc'] > best_acc:
             best_acc = evals['acc']
             state = model.state_dict()
-            state.update(evals)
-            torch.save(state, args.model_dir / 'best_model.t7')
-            logfile.write('NEW BEST MODEL!\n')
+            evals['model'] = state
+            torch.save(evals, os.path.join(args.model_dir,  'best_model.t7'))
+            print('NEW BEST MODEL!\n')
     state = model.state_dict()
     state.update(evals)
-    torch.save(state, args.model_dir / 'model.t7')
+    torch.save(state, os.path.join(args.model_dir, 'model.t7'))
 
 
 if __name__ == '__main__':
