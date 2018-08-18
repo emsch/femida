@@ -2,10 +2,10 @@ import pytest
 import os
 
 
-@pytest.fixture('session')
-def smallpdf():
+@pytest.fixture('session', params=['smallpdf.pdf', 'bigpdf.pdf'])
+def pdf(request):
     return os.path.join(
         os.path.dirname(os.path.abspath(__file__)),
         'data',
-        'smallpdf.pdf'
+        request.param
     )

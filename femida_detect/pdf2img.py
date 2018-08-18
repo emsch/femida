@@ -1,19 +1,15 @@
 import tempfile
 import PIL.Image
 import os
+from pathlib import Path
 
 
-def pdf_to_image_gs(path, out):
-    command = f"gs -dNOPAUSE -q -sDEVICE=png256 -r400 -dBATCH -sOutputFile={out} {path}"
-    code = os.system(command)
-    if code != 0:
-        raise ValueError('gs failed')
-
-
-def pdf_to_image(path, impl='gs'):
-    with tempfile.NamedTemporaryFile(delete=False) as out:
-        _select[impl](path, out.name)
-        return PIL.Image.open(out.name).convert('RGB')
-
-
-_select = {'gs': pdf_to_image_gs}
+def pdf_to_images(path):
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        out = Path(tmp, 'img%03d.png')
+        command = f"gs -dNOPAUSE -q -sDEVICE=png256 -r400 -dBATCH -o {out} {path}"
+        code = os.system(command)
+        if code != 0:
+            raise ValueError('gs failed')
+        return [PIL.Image.open(image).convert('RGB') for image in tmp.iterdir()]
