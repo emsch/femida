@@ -1,5 +1,5 @@
 import tempfile
-import PIL.Image
+import cv2
 import os
 from pathlib import Path
 
@@ -15,4 +15,4 @@ def pdf_to_images(path):
         code = os.system(command.format(out=out, path=path))
         if code != 0:
             raise ValueError('gs failed')
-        return [PIL.Image.open(image).convert('RGB') for image in tmp.iterdir()]
+        return [cv2.imread(str(image)) for image in tmp.iterdir()]
