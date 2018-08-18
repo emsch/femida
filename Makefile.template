@@ -1,0 +1,32 @@
+REMOTE_SERVER: 'remote-server'
+REMOTE_PATH: '~/personal/femida'
+
+.PHONY: sync
+sync:
+	rsync -r --exclude-from='.gitignore' --exclude='.git' -v ./ ${REMOTE_SERVER}:${REMOTE_PATH}
+
+.PHONY: sync-data
+sync-data:
+	rsync -r ./data ${REMOTE_SERVER}:${REMOTE_PATH}
+
+.PHONY: pep8
+pep8:
+	pycodestyle --show-source femida_detect
+
+.PHONY: lint
+lint:
+	pylint femida_detect
+
+.PHONY: codestyle
+codestyle: pep8 lint
+
+.PHONY: install
+install:
+	pip install -e . --process-dependency-links
+	pip install -r requirements-dev.txt
+
+.PHONY: configure
+configure:
+	if [ ! -f .git/hooks/pre-commit ]; then ln -s ../../git-hooks/pre-commit .git/hooks/pre-commit; fi;
+	if [ ! -f local.cfg ]; then touch local.cfg; fi;
+	if ! grep -q "user:" local.cfg; then echo "user: `whoami`" >> local.cfg; fi;
