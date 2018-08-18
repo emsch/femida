@@ -1,4 +1,5 @@
 from . import (
     imgparse,
-    pdf2img
+    pdf2img,
+    utils
 )
