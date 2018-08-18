@@ -1,5 +1,7 @@
 import cv2
+from pyzbar import pyzbar
 import numpy as np
+import json
 
 
 def get_statistics(image, approx):
@@ -29,7 +31,6 @@ def crop_image(image):
 
     kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (7, 7))
     closed = cv2.morphologyEx(edged, cv2.MORPH_CLOSE, kernel)
-    cv2.imwrite("closed.jpg", closed)
     cnts = cv2.findContours(closed.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[1]
 
     allowed_boxes = []
@@ -38,7 +39,7 @@ def crop_image(image):
         box = cv2.boxPoints(rect)
         box = np.int0(box)
 
-        # Условие на отсев шума
+        # no noise condition
         if (rect[1][0] > 40) and (rect[1][1] > 40):
             statistics = get_statistics(image, box)
             if np.mean(statistics) < 100:
@@ -61,3 +62,8 @@ def crop_image(image):
     result = cv2.resize(result, (width, int(width * 578 / 403)))
 
     return result
+
+
+def validate_qr_code(image):
+    barcodes = pyzbar.decode(image)
+    return json.loads(barcodes[0].data.decode("utf-8"))
