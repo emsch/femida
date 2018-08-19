@@ -153,7 +153,7 @@ def main():
             torch.save(evals, os.path.join(args.model_dir,  'best_model.t7'))
             print('NEW BEST MODEL!\n')
     state = model.state_dict()
-    state.update(evals)
+    evals['model'] = state
     torch.save(state, os.path.join(args.model_dir, 'model.t7'))
 
 
