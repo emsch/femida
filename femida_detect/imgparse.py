@@ -204,4 +204,18 @@ class CroppedAnswers(object):
                                       (resize, resize)))
             else:
                 res.append(img[box_to_slice(box)])
-        return (np.stack(res).transpose(0, 3, 1, 2)/255.).astype(np.float32)
+        return (np.stack(res).transpose((0, 3, 1, 2))/255.).astype(np.float32)
+
+    def parse_qr(self):
+        return validate_qr_code(self.cropped)
+
+    def plot_predicted(self, labels):
+        recognized = self.cropped.copy()
+        for p, (label, box) in zip(
+                labels, RECTANGLES_POSITIONS_MIDDLE.items()
+        ):
+            if p:
+                box = cv2.boxPoints(box)
+                box = np.int0(box)
+                cv2.drawContours(recognized, [box], -1, (0, 0, 255), 4)
+        return recognized
