@@ -106,6 +106,7 @@ venv.bak/
 data/
 notebooks/
 Makefile
-results/
-exman
+exman/
+results
 local.cfg
+tests/out/

@@ -33,7 +33,7 @@ def save_image(array, *to):
     assert len(to) >= 1
     dest = os.path.join(
             os.path.dirname(os.path.abspath(__file__)),
-            '..', 'results', 'tests', *to[:-1])
+            'out', *to[:-1])
     os.makedirs(dest, exist_ok=True)
     cv2.imwrite(
         os.path.join(dest, to[-1]),

@@ -30,3 +30,7 @@ configure:
 	if [ ! -f .git/hooks/pre-commit ]; then ln -s ../../git-hooks/pre-commit .git/hooks/pre-commit; fi;
 	if [ ! -f local.cfg ]; then touch local.cfg; fi;
 	if ! grep -q "user:" local.cfg; then echo "user: `whoami`" >> local.cfg; fi;
+
+.PHONY: tests
+tests:
+	py.test
