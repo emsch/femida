@@ -47,17 +47,17 @@ def main(args):
         password=os.environ.get('MONGO_PASSWORD')
     )
     pdfs = conn[DB][PDFS]
-    if args.scan_first:
-        for item in pdfs.find({'status': STATUS_WAITING}):
-            item['skip'] = 0
-            queue.put(item)
-            logger.debug(f"New item in queue _id={item['_id']} "
-                         f"on initial scan")
-            pdfs.update_one(
-                {'_id': item['_id']},
-                {'$set': {'status': STATUS_IN_QUEUE}}
-            )
     try:
+        if args.scan_first:
+            for item in pdfs.find({'status': STATUS_WAITING}):
+                item['skip'] = 0
+                queue.put(item)
+                logger.debug(f"New item in queue _id={item['_id']} "
+                             f"on initial scan")
+                pdfs.update_one(
+                    {'_id': item['_id']},
+                    {'$set': {'status': STATUS_IN_QUEUE}}
+                )
         with pdfs.watch(
                 [{'$match': {'operationType': {'$in': ['insert', 'update', 'replace']}}}]
         ) as stream:
