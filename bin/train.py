@@ -87,7 +87,11 @@ def main():
         vaug='v%s' % args.a
     )
     inp_shape = next(iter(train_loader))[0].shape
-    model = select['v%s' % args.v](inp_shape[1], inp_shape[2], output_dim=1)
+    meta = dict(
+        v='v%s' % args.v,
+        init_params=dict(input_dim=inp_shape[1], input_size=inp_shape[2], output_dim=1)
+    )
+    model = select[meta['v']](**meta['init_params'])
     bce_loss = nn.BCELoss()
     if args.opt == 'adam':
         optimizer = optim.Adam(
@@ -150,10 +154,12 @@ def main():
             best_acc = evals['acc']
             state = model.state_dict()
             evals['model'] = state
+            evals['meta'] = meta
             torch.save(evals, os.path.join(args.model_dir,  'best_model.t7'))
             print('NEW BEST MODEL!\n')
     state = model.state_dict()
     evals['model'] = state
+    evals['meta'] = meta
     torch.save(state, os.path.join(args.model_dir, 'model.t7'))
 
 

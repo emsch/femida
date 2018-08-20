@@ -206,10 +206,14 @@ class CroppedAnswers(object):
                 res.append(img[box_to_slice(box)])
         return (np.stack(res).transpose((0, 3, 1, 2))/255.).astype(np.float32)
 
+    @staticmethod
+    def get_labels():
+        return RECTANGLES_POSITIONS_MIDDLE.keys()
+
     def parse_qr(self):
         return validate_qr_code(self.cropped)
 
-    def plot_predicted(self, labels):
+    def plot_predicted(self, labels, only_answers=False):
         recognized = self.cropped.copy()
         for p, (label, box) in zip(
                 labels, RECTANGLES_POSITIONS_MIDDLE.items()
@@ -218,4 +222,38 @@ class CroppedAnswers(object):
                 box = cv2.boxPoints(box)
                 box = np.int0(box)
                 cv2.drawContours(recognized, [box], -1, (0, 0, 255), 4)
+        if only_answers:
+            recognized = recognized[910:-200]
         return recognized
+
+    @property
+    def personal(self):
+        return self.cropped[20:910, 45:2120]
+
+    @property
+    def answers(self):
+        return self.cropped[910:-200]
+
+    @property
+    def first_name(self):
+        return self.cropped[175:325, 400:2121]
+
+    @property
+    def last_name(self):
+        return self.cropped[30:185, 400:2121]
+
+    @property
+    def middle_name(self):
+        return self.cropped[320:470, 400:2121]
+
+    @property
+    def class_number(self):
+        return self.cropped[470:587, 400:2121]
+
+    @property
+    def math_checkbox(self):
+        return self.cropped[620:770, 460:630]
+
+    @property
+    def ot_checkbox(self):
+        return self.cropped[620:770, 1200:1370]

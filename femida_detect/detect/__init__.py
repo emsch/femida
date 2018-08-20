@@ -6,3 +6,4 @@ from .loader import (
     data_loader
 )
 from . import utils
+from . import eval
