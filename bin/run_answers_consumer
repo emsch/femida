@@ -87,7 +87,7 @@ def main(args):
             h, w, _ = orig.shape
             cv2.imwrite(
                 img_fio,
-                cv2.resize(orig, (1000 * h // w, 1000))
+                cv2.resize(orig, (1000, 1000 * h // w))
             )
             result['img_fio'] = img_fio
             logger.debug(f"Task _id={task['_id']} :: {task['i']} :: predict(cropped)")
@@ -98,7 +98,7 @@ def main(args):
             h, w, _ = inpainted.shape
             cv2.imwrite(
                 img_test_form,
-                cv2.resize(inpainted, (1000 * h // w, 1000))
+                cv2.resize(inpainted, (1000, 1000 * h // w))
             )
             result['img_test_form'] = img_test_form
             for (j, letter), pred in zip(
@@ -115,7 +115,6 @@ def main(args):
                 current_pdf_status = pdf_status[task['UUID']]
                 current_pdf_err_status = pdf_status[task['UUID'] + '__err']
                 if current_pdf_status == 0:
-                    free_pdf_status = True
                     logger.debug(f"Task _id={task['_id']} :: {task['i']} is the last one for UUID")
                     if current_pdf_err_status == 0:
                         logger.info(f"Task _id={task['_id']} :: status :: {STATUS_COMPLETE}")
@@ -129,14 +128,9 @@ def main(args):
                             {'_id': task['_id']},
                             {'$set': {'status': STATUS_PARTIALLY_COMPLETE}}
                         )
-                else:
-                    free_pdf_status = False
                 # we succeeded to update database, try to update answers database
                 # this order makes pymongo errors recoverable
                 answers.insert(result)
-                if free_pdf_status:
-                    del pdf_status[task['UUID']]
-                    del pdf_status[task['UUID'] + '__err']
                 # clean up
                 os.unlink(task['imagef'])
             except pymongo.errors.PyMongoError as e:
