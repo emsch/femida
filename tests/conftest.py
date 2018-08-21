@@ -54,11 +54,6 @@ def cropped_answers(cropped):
 @pytest.fixture('module')
 def model():
     net = select['v3'](3, 28)
-    src = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)),
-        'data', 'model', 'model_v3.t7'
-    )
-    net.load_state_dict(torch.load(src, map_location='cpu'), strict=False)
     for p in net.parameters():
         p.requires_grad = False
     return net.eval()

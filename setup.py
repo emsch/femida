@@ -39,5 +39,6 @@ if __name__ == '__main__':
         name='femida-detect',
         author='Brazhenko Dmitry, Maxim Kochurov',
         packages=find_packages(),
+        scripts=['bin/run_*'],
         **install_deps()
     )
