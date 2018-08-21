@@ -63,23 +63,39 @@ def main(args):
     while True:
         task = queue.get()
         try:
-            logger.debug(f"Got new task _id={task['_id']}")
+            logger.info(f"Got new task _id={task['_id']}")
             try:
+                # try to update mongo database
                 pdfs.update_one(
                     {'_id': task['_id']},
                     {'$set': {'status': STATUS_IN_PROGRESS}}
                 )
             except pymongo.errors.PyMongoError as e:
+                logger.error(f"Task _id={task['_id']} :: recoverable (restart) :: %s", e)
                 queue.put(task)
-                logger.error(e)
                 break
             logger.debug(f"Task _id={task['_id']} :: pdf_to_images_silent")
-            images = femida_detect.pdf2img.pdf_to_images_silent(
-                task['path'],
-                os.path.join(out_path, f"{task['UUID']}__%03d.png")
-            )
+            try:
+                images = femida_detect.pdf2img.pdf_to_images_silent(
+                    task['path'],
+                    os.path.join(out_path, f"{task['UUID']}__%03d.png")
+                )
+            except RuntimeError:
+                logger.error(f"Task _id={task['_id']} :: status :: {STATUS_ERROR}")
+                try:
+                    # try to update mongo database
+                    pdfs.update_one(
+                        {'_id': task['_id']},
+                        {'$set': {'status': STATUS_ERROR}}
+                    )
+                except pymongo.errors.PyMongoError as e:
+                    logger.error(f"Task _id={task['_id']} :: recoverable (restart) :: %s", e)
+                    queue.put(task)
+                    break
+                continue
             pdf_status[task['UUID']] = len(images)
             pdf_status[task['UUID']+'__err'] = 0
+            logger.debug(f"Task _id={task['_id']} :: converted to {len(images)} images")
             for i, imagef in enumerate(images):
                 task_ = dict(
                     UUID=task['UUID'],
@@ -88,17 +104,10 @@ def main(args):
                     imagef=imagef
                 )
                 out_queue.put(task_)
-            logger.debug(f"Task _id={task['_id']} :: converted to {len(images)} images")
-        except RuntimeError:
-            logger.debug(f"Task _id={task['_id']} :: status :: {STATUS_ERROR}")
-            try:
-                pdfs.update_one(
-                    {'_id': task['_id']},
-                    {'$set': {'status': STATUS_ERROR}}
-                )
-            except pymongo.errors.PyMongoError as e:
-                logger.error(e)
-                break
+            logger.info(f"Task _id={task['_id']} :: {len(images)} images have been put in out queue")
+        # other possible errors
+        except pymongo.errors.PyMongoError as e:
+            logger.error(f"recoverable (restart) :: %s", e)
 
 
 if __name__ == '__main__':

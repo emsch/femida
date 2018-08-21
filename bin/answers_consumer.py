@@ -66,7 +66,7 @@ def main(args):
     while True:
         task = queue.get()
         try:
-            logger.debug(f"Got new task _id={task['_id']} :: {task['i']}")
+            logger.info(f"Got new task _id={task['_id']} :: {task['i']}")
             image = cv2.imread(task['imagef'])
             test_results = dict.fromkeys(list(map(str, range(1, 41))), '')
             test_updates = [{
@@ -107,17 +107,42 @@ def main(args):
             ):
                 if pred:
                     test_results[str(j)] += letter
-            logger.debug(f"Task _id={task['_id']} :: {task['i']} :: status :: normal")
+            logger.info(f"Task _id={task['_id']} :: {task['i']} :: status :: normal")
             result.update(status='normal')
+            pdf_status[task['UUID']] -= 1
             try:
+                # ok, try to update pdf database
+                current_pdf_status = pdf_status[task['UUID']]
+                current_pdf_err_status = pdf_status[task['UUID'] + '__err']
+                if current_pdf_status == 0:
+                    logger.debug(f"Task _id={task['_id']} :: {task['i']} is the last one for UUID")
+                    if current_pdf_err_status == 0:
+                        logger.info(f"Task _id={task['_id']} :: status :: {STATUS_COMPLETE}")
+                        pdfs.update_one(
+                            {'_id': task['_id']},
+                            {'$set': {'status': STATUS_COMPLETE}}
+                        )
+                    elif current_pdf_err_status > 0:
+                        logger.info(f"Task _id={task['_id']} :: status :: {STATUS_PARTIALLY_COMPLETE}")
+                        pdfs.update_one(
+                            {'_id': task['_id']},
+                            {'$set': {'status': STATUS_PARTIALLY_COMPLETE}}
+                        )
+                # we succeeded to update database, try to update answers database
+                # this order makes pymongo errors recoverable
                 answers.insert(result)
-                pdf_status[task['UUID']] -= 1
+                # clean up
+                del pdf_status[task['UUID']]
+                del pdf_status[task['UUID'] + '__err']
                 os.unlink(task['imagef'])
             except pymongo.errors.PyMongoError as e:
-                logger.error(e)
+                # We get a recoverable error with database, restart can help
+                logger.error(f"Task _id={task['_id']} :: recoverable (restart) :: %s", e)
                 queue.put(task)
+                pdf_status[task['UUID']] += 1
                 break
-        except cv2.error:
+        # top level error we only care about
+        except cv2.error as e:
             result = dict(
                 personal=[],
                 UUID=task['UUID'],
@@ -128,37 +153,15 @@ def main(args):
                 status='error'
             )
             try:
+                logger.error(f"Task _id={task['_id']} :: {task['i']} :: status :: error :: %s", e)
                 answers.insert(result)
                 pdf_status[task['UUID']] -= 1
                 pdf_status[task['UUID'] + '__err'] += 1
                 os.unlink(task['imagef'])
             except pymongo.errors.PyMongoError as e:
-                logger.error(e)
+                logger.error(f"Task _id={task['_id']} :: {task['i']} :: recoverable (restart) :: %s", e)
                 queue.put(task)
                 break
-        try:
-            current_pdf_status = pdf_status[task['UUID']]
-            current_pdf_err_status = pdf_status[task['UUID']+'__err']
-            if current_pdf_status == 0:
-                del pdf_status[task['UUID']]
-                del pdf_status[task['UUID'] + '__err']
-                if current_pdf_err_status == 0:
-                    logger.debug(f"Task _id={task['_id']} :: status :: {STATUS_COMPLETE}")
-                    pdfs.update_one(
-                        {'_id': task['_id']},
-                        {'$set': {'status': STATUS_COMPLETE}}
-                    )
-                elif current_pdf_err_status > 0:
-                    logger.debug(f"Task _id={task['_id']} :: status :: {STATUS_PARTIALLY_COMPLETE}")
-                    pdfs.update_one(
-                        {'_id': task['_id']},
-                        {'$set': {'status': STATUS_PARTIALLY_COMPLETE}}
-                    )
-        except pymongo.errors.PyMongoError as e:
-            # The ChangeStream encountered an unrecoverable error or the
-            # resume attempt failed to recreate the cursor.
-            logger.error(e)
-            break
 
 
 if __name__ == '__main__':

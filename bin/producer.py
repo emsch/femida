@@ -51,13 +51,15 @@ def main(args):
         if args.scan_first:
             for item in pdfs.find({'status': STATUS_WAITING}):
                 item['skip'] = 0
-                queue.put(item)
-                logger.debug(f"New item in queue _id={item['_id']} "
-                             f"on initial scan")
+                logger.info(f"New item for queue _id={item['_id']} "
+                            f"on initial scan")
                 pdfs.update_one(
                     {'_id': item['_id']},
                     {'$set': {'status': STATUS_IN_QUEUE}}
                 )
+                queue.put(item)
+                logger.debug(f"Item _id={item['_id']} "
+                             f"put in queue done")
         with pdfs.watch(
                 [{'$match': {'operationType': {'$in': ['insert', 'update', 'replace']}}}]
         ) as stream:
@@ -75,17 +77,19 @@ def main(args):
                 if from_update or from_insert_or_replace:
                     task = event['fullDocument']
                     task['skip'] = 0
-                    queue.put(task)
-                    logger.debug(f"New item in queue _id={event['fullDocument']['_id']} "
-                                 f"on event {event['operationType']}")
+                    logger.info(f"New item for queue _id={event['fullDocument']['_id']} "
+                                f"on event {event['operationType']}")
                     pdfs.update_one(
                         event['documentKey'],
                         {'$set': {'status': STATUS_IN_QUEUE}}
                     )
+                    queue.put(task)
+                    logger.debug(f"Item _id={task['_id']} "
+                                 f"put in queue done")
     except pymongo.errors.PyMongoError as e:
         # The ChangeStream encountered an unrecoverable error or the
         # resume attempt failed to recreate the cursor.
-        logger.error(e)
+        logger.error(f"Task _id={task['_id']} :: recoverable (restart with --scan-first) :: %s", e)
 
 
 if __name__ == '__main__':
