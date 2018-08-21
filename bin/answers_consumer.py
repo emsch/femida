@@ -115,6 +115,7 @@ def main(args):
                 current_pdf_status = pdf_status[task['UUID']]
                 current_pdf_err_status = pdf_status[task['UUID'] + '__err']
                 if current_pdf_status == 0:
+                    free_pdf_status = True
                     logger.debug(f"Task _id={task['_id']} :: {task['i']} is the last one for UUID")
                     if current_pdf_err_status == 0:
                         logger.info(f"Task _id={task['_id']} :: status :: {STATUS_COMPLETE}")
@@ -128,12 +129,15 @@ def main(args):
                             {'_id': task['_id']},
                             {'$set': {'status': STATUS_PARTIALLY_COMPLETE}}
                         )
+                else:
+                    free_pdf_status = False
                 # we succeeded to update database, try to update answers database
                 # this order makes pymongo errors recoverable
                 answers.insert(result)
+                if free_pdf_status:
+                    del pdf_status[task['UUID']]
+                    del pdf_status[task['UUID'] + '__err']
                 # clean up
-                del pdf_status[task['UUID']]
-                del pdf_status[task['UUID'] + '__err']
                 os.unlink(task['imagef'])
             except pymongo.errors.PyMongoError as e:
                 # We get a recoverable error with database, restart can help
