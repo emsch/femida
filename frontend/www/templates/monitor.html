@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Фемида // Монитор</title>
+
+
+    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
+
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+    <link href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.0/css/bootstrap.min.css" rel="stylesheet" id="bootstrap-css">
+    <script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.0/js/bootstrap.min.js"></script> 
+    <!------ Include the above in your HEAD tag ---------->
+
+    <script type="text/javascript">
+        var source = new EventSource('/manager_flow');
+        source.onmessage = function (event) {
+             var obj = JSON.parse(event.data);
+             // alert(obj.text);
+             console.log(obj.text, obj);
+             var pdf = obj.pdf_statuses;
+
+            $('.error-pdf').css('width', pdf['ICR errored'] || 0+'%').attr('aria-valuenow', pdf['ICR errored']);
+            $('.error-pdf-label').text(pdf['ICR errored'] || 0);
+
+            $('.waiting-pdf').css('width', pdf['waiting for ICR'] || 0+'%').attr('aria-valuenow', pdf['waiting for ICR']);
+            $('.waiting-pdf-label').text(pdf['waiting for ICR'] || 0);
+
+            $('.in-queue-pdf').css('width', pdf['in queue for ICR'] || 0+'%').attr('aria-valuenow', pdf['in queue for ICR']);
+            $('.in-queue-pdf-label').text(pdf['in queue for ICR'] || 0);
+
+            $('.in-progress-pdf').css('width', pdf['ICR in progress'] || 0+'%').attr('aria-valuenow', pdf['ICR in progress']);
+            $('.in-progress-pdf-label').text(pdf['ICR in progress'] || 0);
+
+            $('.partially-complete-pdf').css('width', pdf['ICR partially complete'] || 0+'%').attr('aria-valuenow', pdf['ICR partially complete']);
+            $('.partially-complete-pdf-label').text(pdf['ICR partially complete'] || 0);
+
+            $('.success-pdf').css('width', pdf['ICR complete'] || 0+'%').attr('aria-valuenow', pdf['ICR complete']);
+            $('.success-pdf-label').text(pdf['ICR complete'] || 0);
+
+        };
+    </script>
+
+    <style>
+.progress{
+height:50px;
+text-align:center;
+}
+
+.progress-bar {
+  padding:15px;
+}
+    </style>
+
+
+  </head>
+  <body>
+    <!-- Latest compiled and minified CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.12.4/css/bootstrap-select.min.css">
+
+    <!-- Latest compiled and minified JavaScript -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.12.4/js/bootstrap-select.min.js"></script>
+
+<div class="container">
+    <div class="row">
+
+        <h2>Фемида // Монитор</h2>
+<!--         <p class="lead">
+            This new pattern transforms Bootstrap's form fields into modern, fun and user-friendly experiences!<br />
+            <small class="text-muted">Learn more about this pattern at <a href="http://bradfrostweb.com/blog/post/float-label-pattern/" 
+target="blank">http://bradfrostweb.com/blog/post/float-label-pattern/</a></small>
+        </p>
+ -->
+        {% if current_user.is_authenticated %}
+            <p>Hi {{ current_user.name }}!
+        {% endif %}
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}
+            <div class="row">
+                <div class="col-sm-12">
+                    <ul class=flashes>
+                    {% for message in messages %}
+                      <li>{{ message }}</li>
+                    {% endfor %}
+                    </ul>
+                </div>
+            </div>
+          {% endif %}
+        {% endwith %}
+        <hr />
+        <div class="row">
+            <div class="col-sm-12">
+                <h2>Отсканированные PDF</h2>
+                  <div class="progress">
+                      <a href='/mongo/db/femida/pdfs?key=status&value=ICR+errored&type=S' target="_blank"> <div class="progress-bar progress-bar-danger error-pdf" role="progressbar" aria-valuenow="70"
+                      aria-valuemin="0" aria-valuemax="100" style="width:0%">
+                        <span class="error-pdf-label">0</span>
+                      </div></a>
+                      <a href='/mongo/db/femida/pdfs?key=status&value=waiting+for+ICR&type=S' target="_blank"> <div class="progress-bar progress-bar-info waiting-pdf" role="progressbar" aria-valuenow="50"
+                      aria-valuemin="0" aria-valuemax="100" style="width:0%">
+                        <span class="waiting-pdf-label">0</span>
+                      </div></a>
+                      <a href='/mongo/db/femida/pdfs?key=status&value=in queue+for+ICR&type=S' target="_blank"> <div class="progress-bar progress-bar-info in-queue-pdf" role="progressbar" aria-valuenow="50"
+                      aria-valuemin="0" aria-valuemax="100" style="width:0%">
+                        <span class="in-queue-pdf-label">0</span>
+                      </div></a>
+                      <a href='/mongo/db/femida/pdfs?key=status&value=ICR+in+progress&type=S' target="_blank"> <div class="progress-bar progress-bar-striped progress-bar-info active in-progress-pdf" role="progressbar" aria-valuenow="50"
+                      aria-valuemin="0" aria-valuemax="100" style="width:0%">
+                        <span class="in-progress-pdf-label">0</span>
+                      </div></a>
+                      <a href='/mongo/db/femida/pdfs?key=status&value=ICR+partially+complete&type=S' target="_blank"> <div class="progress-bar progress-bar-warning partially-complete-pdf" role="progressbar" aria-valuenow="60"
+                      aria-valuemin="0" aria-valuemax="100" style="width:0%">
+                        <span class="partially-complete-pdf-label">0</span>
+                      </div></a>
+                      <a href='/mongo/db/femida/pdfs?key=status&value=ICR+complete&type=S' target="_blank"> <div class="progress-bar progress-bar-success success-pdf" role="progressbar" aria-valuenow="40"
+                      aria-valuemin="0" aria-valuemax="100" style="width:0%">
+                        <span class="success-pdf-label">0</span>
+                      </di</a>
+
+
+
+                  </div>
+
+            </div>
+            <hr>
+        </div>
+
+
+    </div>
+</div>
+
+<br>
+
+
+
+  </body>
+</html>
+
+

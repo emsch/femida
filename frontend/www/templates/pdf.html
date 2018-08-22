@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Фемида // Распознавание тестов ЭМШ</title>
+
+
+    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
+
+    <script src="//code.jquery.com/jquery-1.11.1.min.js"></script> 
+    <link href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.0/css/bootstrap.min.css" rel="stylesheet" id="bootstrap-css">
+    <script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.0/js/bootstrap.min.js"></script> 
+    <!------ Include the above in your HEAD tag ---------->
+    <link href="css/form.css" rel="stylesheet" id="bootstrap-css">
+    <script src="js/form.js"></script> 
+
+
+  </head>
+  <body>
+    <!-- Latest compiled and minified CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.12.4/css/bootstrap-select.min.css">
+
+    <!-- Latest compiled and minified JavaScript -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.12.4/js/bootstrap-select.min.js"></script>
+
+<div class="container">
+    <div class="row">
+        <h2>Фемида // Загрузка PDF</h2>
+<!--         <p class="lead">
+            This new pattern transforms Bootstrap's form fields into modern, fun and user-friendly experiences!<br />
+            <small class="text-muted">Learn more about this pattern at <a href="http://bradfrostweb.com/blog/post/float-label-pattern/" 
+target="blank">http://bradfrostweb.com/blog/post/float-label-pattern/</a></small>
+        </p>
+ -->
+         <div class="alert alert-warning">
+            <h4>БЕТА-режим</h4>
+            О любых проблемах можно писать в <a href='https://telegram.me/feriat'>чат поддержки в телеграм</a>,
+            либо лично Дмитрию Браженко, Максиму Кочурову или Андрею Петрину.
+        </div>
+        {% if current_user.is_authenticated %}
+            <p>Hi {{ current_user.name }}!
+        {% endif %}
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}
+            <div class="row">
+                <div class="col-sm-12">
+                    <ul class=flashes>
+                    {% for message in messages %}
+                      <li>{{ message }}</li>
+                    {% endfor %}
+                    </ul>
+                </div>
+            </div>
+          {% endif %}
+        {% endwith %}
+        <hr />
+        <div class="row">
+            <div class="col-sm-12">
+                <h3>Формат PDF файла</h4>
+                <p> В форму ниже необходимо загрузить pdf файл с отсканированными тестами. Ниже представлен список требований к входящему файлу:
+                <p><b>1. Формат файла: PDF</b>
+                <p><b>2. Размер А4</b>. Рекомендованное разрешение при сканировании <b>>400dpi</b>. Верх PDF должен быть сверху, т.е. все тесты должны быть правильно ориентированы.
+                <p><b>3.</b> Название файла должно быть <b>на английском языке</b>.
+                <p><b>4.</b> Максимальный размер файла <b>16 МБ</b>.
+                <p><b>5. Дождитесь подтверждения об отправке</b> вверху экрана.
+                <p>Пример валидного pdf файла: <a href='static/raw-pdf-00.pdf' download>по ссылке</a></p>
+
+            </div>
+
+
+        </div>
+        <div class="row">
+            <form action="{{ url_for('handle_pdf') }}" method="POST" enctype='multipart/form-data' >
+            <hr>
+            <div class="col-sm-3">
+                  <div class="form-group">
+                    <input type="file" name="file" class="form-control-file" id="exampleFormControlFile1">
+                  </div>
+            </div>
+            <div class="col-sm-4">
+                <button type="submit" class="btn btn-success btn-large" style="font-size: 16px" name="status" value="ok">
+                    <i class="icon-columns"></i>  Отправить
+                </button>
+            </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<br>
+
+
+
+  </body>
+</html>
+
+

@@ -30,7 +30,7 @@ parser.add_argument('--root', type=str, required=True,
 parser.add_argument('--model-path', type=str, required=True)
 parser.add_argument('--max-errors', type=int, default=1)
 parser.add_argument('--critical-errors', type=int, default=2)
-parser.add_argument('--save-path', type=str, default='/media/EMSCH_tests_ICR/icr_results/')
+parser.add_argument('--save-path', type=str, default='/media/pdf_uploads/')
 parser.add_argument('--cuda', action='store_true')
 parser.add_argument('--debug', action='store_true')
 logger = logging.getLogger('consumer :: answers')
