@@ -64,16 +64,26 @@ LOG_TEMPLATE = 'e[{perc:.2f}/{e}/{total}]\tloss={loss:.3f}\tacc={acc:.4f}'
 LOG_TEMPLATE_VAL = '\nVALIDATION e[{e}/{total}]\tloss={loss:.3f}\tacc={acc:.4f}\n'
 
 
-def parse_args(kwargs):
+def parse_args_from_dict(kwargs):
     command = ''
     for key, val in kwargs.items():
-        command += f'--{key}={val} '
-    return parser.parse_args(command)
+        if len(key) == 1:
+            command += f'-{key} {val} '
+        else:
+            command += f'--{key}={val} '
+    try:
+        return check_args(parser.parse_args(command))
+    except SystemExit as e:
+        raise ValueError(e) from e
 
 
-def main(args):
-    if isinstance(args, dict):
-        args = parse_args(args)
+def main(*args, **kwargs):
+    if kwargs:
+        assert not args
+        args = parse_args_from_dict(kwargs)
+    else:
+        assert not kwargs
+        args, = args
     torch.manual_seed(args.seed)
     val_loader = data_loader(
         root=args.data_dir / 'validate',
@@ -172,5 +182,4 @@ def main(args):
 
 
 if __name__ == '__main__':
-    args = check_args(parser.parse_args())
-    main(args)
+    main(check_args(parser.parse_args()))
