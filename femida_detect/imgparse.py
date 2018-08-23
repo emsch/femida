@@ -6,7 +6,7 @@ import collections
 try:
     from pyzbar import pyzbar
 except ImportError:
-    pyzbar = NotImplemented('pyzbar is not implemented')
+    pyzbar = NotImplemented
 import itertools
 
 from .utils import listit
