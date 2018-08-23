@@ -3,7 +3,10 @@ import numpy as np
 import json
 import functools
 import collections
-from pyzbar import pyzbar
+try:
+    from pyzbar import pyzbar
+except ImportError:
+    pyzbar = NotImplemented('pyzbar is not implemented')
 import itertools
 
 from .utils import listit

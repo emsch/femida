@@ -7,7 +7,6 @@ import torch.optim as optim
 import sys
 import pathlib
 import exman
-from argparse import Namespace
 from femida_detect.detect import select, data_loader
 
 
@@ -65,8 +64,16 @@ LOG_TEMPLATE = 'e[{perc:.2f}/{e}/{total}]\tloss={loss:.3f}\tacc={acc:.4f}'
 LOG_TEMPLATE_VAL = '\nVALIDATION e[{e}/{total}]\tloss={loss:.3f}\tacc={acc:.4f}\n'
 
 
-def main(**args):
-    args = Namespace(**args)
+def parse_args(kwargs):
+    command = ''
+    for key, val in kwargs.items():
+        command += f'--{key}={val} '
+    return parser.parse_args(command)
+
+
+def main(args):
+    if isinstance(args, dict):
+        args = parse_args(args)
     torch.manual_seed(args.seed)
     val_loader = data_loader(
         root=args.data_dir / 'validate',
@@ -166,4 +173,4 @@ def main(**args):
 
 if __name__ == '__main__':
     args = check_args(parser.parse_args())
-    main(**args.__dict__)
+    main(args)
