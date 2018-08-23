@@ -70,7 +70,7 @@ def parse_args_from_dict(kwargs):
         if len(key) == 1:
             command += f'-{key} {val} '
         else:
-            command += f'--{key}={val} '
+            command += f'--{key} {val} '
     try:
         return check_args(parser.parse_args(command))
     except SystemExit as e:
