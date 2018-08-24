@@ -4,7 +4,7 @@ import uuid
 import datetime
 import time
 import json
-from urllib.parse import quote_plus
+
 from flask import (
     Flask, request,
     send_from_directory,
@@ -24,9 +24,9 @@ from flask_pymongo import PyMongo
 from bson.objectid import ObjectId
 from werkzeug.utils import secure_filename
 
+# directories are created in prestart.sh file
 UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER', '/media/pdf_uploads/')
 RESULTS_FOLDER = os.environ.get('RESULTS_FOLDER', '/media/icr_results/')
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 ALLOWED_EXTENSIONS = {'pdf'}
 
 
@@ -85,7 +85,7 @@ def send_img(path):
     return send_from_directory('img', path)
 
 
-@app.route('/media/EMSCH_tests_ICR/<path:path>')
+@app.route(f'/media/{RESULTS_FOLDER}/<path:path>')
 def send_icr_img(path):
     return send_from_directory('img', path)
 
@@ -310,11 +310,12 @@ def event_stream():
     import random
     for i in range(10):
         num = random.randint(0, 20)
-        pdf_statuses={r['_id']:r['count'] for r in pdfs.aggregate([{"$group" : {'_id':"$status", 'count':{'$sum':1}}}])}
+        pdf_statuses ={ r['_id']:r['count'] for r in pdfs.aggregate(
+            [{"$group": {'_id': "$status", 'count': {'$sum': 1}}}])}
         message = {
             'text': 'hey',
-            'number': num , 
-            'pdf_statuses':pdf_statuses
+            'number': num,
+            'pdf_statuses': pdf_statuses
         }
         yield 'data: %s\n\n' % json.dumps(message)
         time.sleep(3)
