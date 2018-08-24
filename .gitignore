@@ -114,3 +114,5 @@ exman/
 results
 local.cfg
 tests/out/
+docker/
+secret

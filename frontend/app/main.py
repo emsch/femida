@@ -4,7 +4,7 @@ import uuid
 import datetime
 import time
 import json
-
+from urllib.parse import quote_plus
 from flask import (
     Flask, request,
     send_from_directory,
@@ -25,6 +25,8 @@ from bson.objectid import ObjectId
 from werkzeug.utils import secure_filename
 
 UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER', '/media/pdf_uploads/')
+RESULTS_FOLDER = os.environ.get('RESULTS_FOLDER', '/media/icr_results/')
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 ALLOWED_EXTENSIONS = {'pdf'}
 
 
@@ -33,7 +35,7 @@ app = Flask(__name__, static_url_path='')
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 app.config['SESSION_TYPE'] = 'memcached'
-app.config["MONGO_URI"] = "mongodb://localhost:27017/femida"
+app.config["MONGO_URI"] = "mongodb://mongodb:27017/femida"
 app.secret_key = os.environ['FEMIDA_SECRET_KEY']
 app.debug = os.environ.get('FEMIDA_DEBUG', False)
 
