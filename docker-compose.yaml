@@ -13,6 +13,15 @@ services:
       - 27017:27017
     command: mongod --smallfiles
 
+  reverse-proxy:
+    image: traefik # The official Traefik docker image
+    command: --api --docker # Enables the web UI and tells Træfik to listen to docker
+    ports:
+      - "80:80"     # The HTTP port
+      - "8080:8080" # The Web UI (enabled by --api)
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock # So that Traefik can listen to the Docker events
+
   frontend:
     build:
       context: frontend
@@ -21,9 +30,32 @@ services:
       - secret
     depends_on:
       - mongodb
+      - reverse-proxy
     ports:
-      - 80:80
-      - 443:443
+      - 8090:80
     volumes:
       - ./docker/media/:/media/
       - ./docker/ssl:/etc/nginx/ssl
+    labels:
+      - "traefik.frontend.rule=Host:femida.emsch.ru"
+
+  mongo-express:
+    image: mongo-express
+    restart: always
+    environment:
+      - ME_CONFIG_MONGODB_SERVER=mongo
+      - ME_CONFIG_MONGODB_PORT=27017
+      - ME_CONFIG_MONGODB_ENABLE_ADMIN=true
+
+    depends_on:
+      - mongodb
+      - reverse-proxy
+    links:
+      - "mongodb:mongo"
+    env_file:
+      - secret
+    ports:
+      - "8888:8081"
+    labels:
+      - "traefik.frontend.rule=Host:mongo.femida.emsch.ru"
+
