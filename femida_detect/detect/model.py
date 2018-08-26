@@ -110,6 +110,5 @@ class Modelv3(nn.Module):
 select = dict(
     v1=Modelv1,
     v2=Modelv2,
-    v3=Modelv3,
-    v4=Modelv4
+    v3=Modelv3
 )
