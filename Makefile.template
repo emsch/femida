@@ -13,17 +13,20 @@ sync-data:
 pep8:
 	pycodestyle --show-source femida_detect
 
+.PHONY: pep8
+pep8:
+	pycodestyle --config python/setup.cfg --show-source python/femida_detect frontend/app/main.py
+
 .PHONY: lint
 lint:
-	pylint femida_detect
+	pylint python/femida_detect frontend/app/main.py
 
 .PHONY: codestyle
 codestyle: pep8 lint
 
 .PHONY: install
 install:
-	pip install -e . --process-dependency-links
-	pip install -r requirements-dev.txt
+	pip install -e python --process-dependency-links
 
 .PHONY: configure
 configure:

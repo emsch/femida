@@ -310,7 +310,7 @@ def event_stream():
     import random
     for i in range(10):
         num = random.randint(0, 20)
-        pdf_statuses ={ r['_id']:r['count'] for r in pdfs.aggregate(
+        pdf_statuses = {r['_id']: r['count'] for r in pdfs.aggregate(
             [{"$group": {'_id': "$status", 'count': {'$sum': 1}}}])}
         message = {
             'text': 'hey',
