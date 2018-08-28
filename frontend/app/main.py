@@ -86,9 +86,9 @@ def send_img(path):
     return send_from_directory('img', path)
 
 
-@app.route(f'/media/{RESULTS_FOLDER}/<path:path>')
+@app.route(f'/media/<path:path>')
 def send_ocr_img(path):
-    return send_from_directory('img', path)
+    return send_from_directory(RESULTS_FOLDER, path)
 
 
 @app.route('/static/<path:path>')

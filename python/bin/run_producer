@@ -18,6 +18,7 @@ parser.add_argument('--host', type=str, default='localhost')
 parser.add_argument('--port', type=int, default=27017)
 parser.add_argument('--log-to', type=str,
                     help='path to logfile')
+parser.add_argument('--initrs', action='store_true')
 parser.add_argument('--root', type=str, required=True,
                     help='path to local queue')
 parser.add_argument('--scan-first', action='store_true')
@@ -37,6 +38,12 @@ def main(args):
         username=os.environ.get('MONGODB_USERNAME'),
         password=os.environ.get('MONGODB_PASSWORD')
     )
+    if args.initrs:
+        try:
+            conn.admin.command("replSetInitiate")
+            logger.info('Initiating replica set with implicit configuration')
+        except pymongo.errors.OperationFailure:
+            logger.warning('Replica set is already configured')
     pdfs = conn[DB][PDFS]
     try:
         if args.scan_first:
