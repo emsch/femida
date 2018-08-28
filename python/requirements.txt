@@ -1,0 +1,9 @@
+torch
+torchvision
+imgaug
+opencv-python
+pyzbar
+git+https://github.com/ferrine/exman.git#egg=exman
+pymongo
+persist-queue
+filelock

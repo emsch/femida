@@ -107,10 +107,13 @@ venv.bak/
 .idea/
 .DS_Store
 data/
-!tests/data/
+!python/tests/data/
 notebooks/
 Makefile
 exman/
 results
 local.cfg
-tests/out/
+python/tests/out/
+docker/
+secret
+model

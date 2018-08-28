@@ -1,0 +1,104 @@
+#!/usr/bin/env python3
+
+import pymongo
+import pymongo.errors
+import argparse
+import os
+import logging
+import persistqueue
+
+STATUS_WAITING = 'waiting for OCR'
+STATUS_IN_QUEUE = 'in queue for OCR'
+DB = 'femida'
+PDFS = 'pdfs'
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--host', type=str, default='localhost')
+parser.add_argument('--port', type=int, default=27017)
+parser.add_argument('--log-to', type=str,
+                    help='path to logfile')
+parser.add_argument('--initrs', action='store_true')
+parser.add_argument('--root', type=str, required=True,
+                    help='path to local queue')
+parser.add_argument('--scan-first', action='store_true')
+parser.add_argument('--debug', action='store_true')
+logger = logging.getLogger('producer')
+
+
+def main(args):
+    queue = persistqueue.SQLiteQueue(
+        os.path.join(args.root, 'pdf')
+    )
+    logger.info(f"Opened PDF Queue in {queue.path}")
+    logger.info(f'Connecting to {args.host}:{args.port} with provided credentials')
+    conn = pymongo.MongoClient(
+        host=args.host,
+        port=args.port,
+        username=os.environ.get('MONGODB_USERNAME'),
+        password=os.environ.get('MONGODB_PASSWORD')
+    )
+    if args.initrs:
+        try:
+            conn.admin.command("replSetInitiate")
+            logger.info('Initiating replica set with implicit configuration')
+        except pymongo.errors.OperationFailure:
+            logger.warning('Replica set is already configured')
+    pdfs = conn[DB][PDFS]
+    try:
+        if args.scan_first:
+            for item in pdfs.find({'status': STATUS_WAITING}):
+                item['errors'] = 0
+                logger.info(f"New item for queue _id={item['_id']} "
+                            f"on initial scan")
+                pdfs.update_one(
+                    {'_id': item['_id']},
+                    {'$set': {'status': STATUS_IN_QUEUE}}
+                )
+                queue.put(item)
+                logger.debug(f"Item _id={item['_id']} "
+                             f"put in queue done")
+        with pdfs.watch(
+                [{'$match': {'operationType': {'$in': ['insert', 'update', 'replace']}}}]
+        ) as stream:
+            logger.info(f'Started watching mongo server changes on {DB}::{PDFS}')
+            for event in stream:
+                from_update = (
+                        event['operationType'] == 'update' and
+                        'status' in event['updateDescription']['updatedFields'] and
+                        event['updateDescription']['updatedFields']['status'] == STATUS_WAITING
+                )
+                from_insert_or_replace = (
+                        event['operationType'] in {'insert', 'replace'} and
+                        event['fullDocument']['status'] == STATUS_WAITING
+                )
+                if from_update or from_insert_or_replace:
+                    task = event['fullDocument']
+                    task['errors'] = 0
+                    logger.info(f"New item for queue _id={event['fullDocument']['_id']} "
+                                f"on event {event['operationType']}")
+                    pdfs.update_one(
+                        event['documentKey'],
+                        {'$set': {'status': STATUS_IN_QUEUE}}
+                    )
+                    queue.put(task)
+                    logger.debug(f"Item _id={task['_id']} "
+                                 f"put in queue done")
+    except pymongo.errors.PyMongoError as e:
+        # The ChangeStream encountered an unrecoverable error or the
+        # resume attempt failed to recreate the cursor.
+        logger.error(f"Recoverable (restart with --scan-first) :: %s", e)
+
+
+if __name__ == '__main__':
+    pargs = parser.parse_args()
+    formatter = logging.Formatter('%(asctime)s :: %(name)s :: %(levelname)s - %(message)s')
+    if pargs.log_to is not None:
+        handle = logging.FileHandler(pargs.log_to)
+    else:
+        handle = logging.StreamHandler()
+    handle.setFormatter(formatter)
+    logger.addHandler(handle)
+    if pargs.debug or os.environ.get('FEMIDA_DEBUG', False):
+        logger.setLevel(logging.DEBUG)
+    main(pargs)

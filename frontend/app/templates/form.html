@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Фемида // Распознавание тестов ЭМШ</title>
+
+
+    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
+
+    <script src="//code.jquery.com/jquery-1.11.1.min.js"></script> 
+    <link href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.0/css/bootstrap.min.css" rel="stylesheet" id="bootstrap-css">
+    <script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.0/js/bootstrap.min.js"></script> 
+    <script src="//1000hz.github.io/bootstrap-validator/dist/validator.min.js"></script>
+
+    <!------ Include the above in your HEAD tag ---------->
+    <link href="css/form.css" rel="stylesheet" id="bootstrap-css">
+    <script src="js/form.js"></script> 
+
+
+  </head>
+  <body>
+    <!-- Latest compiled and minified CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.12.4/css/bootstrap-select.min.css">
+
+    <!-- Latest compiled and minified JavaScript -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.12.4/js/bootstrap-select.min.js"></script>
+
+ <div class="container"><form action="{{ url_for('handle_data') }}" method="POST" data-toggle="validator">
+    <div class="row">
+        <h2>Фемида // Система распознавания вступительных тестов в ЭМШ</h2>
+<!--         <p class="lead">
+            This new pattern transforms Bootstrap's form fields into modern, fun and user-friendly experiences!<br />
+            <small class="text-muted">Learn more about this pattern at <a href="http://bradfrostweb.com/blog/post/float-label-pattern/" 
+target="blank">http://bradfrostweb.com/blog/post/float-label-pattern/</a></small>
+        </p>
+ -->
+         <div class="alert alert-warning">
+            <h4>БЕТА-режим</h4>
+            О любых проблемах можно писать в <a href='https://telegram.me/feriat'>чат поддержки в телеграм</a>,
+            либо лично Дмитрию Браженко, Максиму Кочурову или Андрею Петрину.
+        </div>
+        <hr />
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}
+            <div class="row">
+                <div class="col-sm-12">
+                    <ul class=flashes>
+                    {% for message in messages %}
+                      <li>{{ message }}</li>
+                    {% endfor %}
+                    </ul>
+                </div>
+            </div>
+          {% endif %}
+        {% endwith %}
+        {% if no_more_candidates %}
+        <div class="row">
+            <div class="col-sm-12">
+                <h2> На текущий момент для вас задачи закончились </h2>
+                <p> Сообщите об этом ответственному за проверку
+                {% if current_user.is_authenticated %}
+                    <p>Hi {{ current_user.name }}!
+                {% endif %}
+            </div>
+        </div>
+        {% else %}
+        <div class="row">
+            <div class="col-sm-8">
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <h3 class="panel-title pull-left">
+                             ФИО школьника
+                        </h3>
+                        <h6  class="panel-title pull-right">{{ params.id}}</h6>
+                        <div class="clearfix"></div>
+                    </div>
+                    <div class="panel-body">
+                        <img class="img-responsive" src='{{ params.img_fio }}'>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-4">
+                <br>
+                <input name='id' value='{{ params.id }}' required hidden>
+                <div class="form-group float-label-control">
+                    <label for="">Фамилия</label>
+                    <input name='surname' type="form-control" class="form-control" placeholder="Фамилия" value='{{ params.surname }}' required>
+                </div>
+                <div class="form-group float-label-control">
+                    <label for="">Имя</label>
+                    <input name='name' type="form-control" class="form-control" placeholder="Имя" value='{{ params.name }}' required>
+                </div>
+                <div class="form-group float-label-control">
+                    <label for="">Отчество</label>
+                    <input name='patronymic' type="form-control" class="form-control" placeholder="Отчество" value='{{ params.patronymic }}' required>
+                </div>
+                <div class="form-group float-label-control">
+                    <label for="">Класс</label>
+                    <input name='class' type="number" class="form-control" placeholder="Класс" value='{{ params.class }}' min=8 max=11 required>
+                </div>
+                <hr>
+                <label class="form-check-input h4">
+                  <input type="radio" id='type' name='type' 
+                    value='mat' {% if params.type == 'mat' %}checked{% endif %} required> МАТ</input>  
+                </label>
+                &nbsp; &nbsp; &nbsp;
+                <label class="form-check-input h4">
+                  <input type="radio" id='type' name='type' 
+                    value='ot' {% if params.type == 'ot' %}checked{% endif %} required> ОТ</input>  
+                </label>
+                <div class="form-group float-label-control">
+                    <label for="">Вариант</label>
+                    <input name='variant' type="number" class="form-control" placeholder="Вариант" value='{{ params.variant }}' min=100 max=99999 required>
+                </div>
+                <hr>
+            </div>
+        </div>
+        <div class="row">
+             <div class="col-sm-8">
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <h3 class="panel-title">
+                            Ответы школьника
+                        </h3>
+                    </div>
+                    <div class="panel-body">
+                        <img class="img-responsive" src='{{ params.img_test_form }}'>
+                    </div>
+                </div>
+            </div>
+
+        <div class="row">
+           <div class="col-sm-4">
+                <h3 lass="page-header">Исправления</h3>
+                <form role="form">
+                    <div class="panel-body">
+                        <ul>
+                            {% for i, q, ans in params.updates %}
+                            <li>
+                                <div class="form-group input-group">
+                                    <input type="number" style="width: 60px" class="form-control input-small" name="fix_q_{{i}}" value="{{q}}" min=1 max=40>
+                                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                                    <span class="glyphicon glyphicon-arrow-right" aria-hidden="true"></span>
+                                    &nbsp;
+                                    <select name="fix_ans_{{i}}" sty>
+                                        <option value="-"></option>
+                                        <option value="A" {% if ans == 'A' %}selected{% endif %}>A</option>
+                                        <option value="B" {% if ans == 'B' %}selected{% endif %}>B</option>
+                                        <option value="C" {% if ans == 'C' %}selected{% endif %}>C</option>
+                                        <option value="D" {% if ans == 'D' %}selected{% endif %} >D</option>
+                                        <option value="E" {% if ans == 'E' %}selected{% endif %}>E</option>
+                                        <option value="F" {% if ans == 'F' %}selected{% endif %}>F</option>
+                                        <option value="NA" {% if ans == 'NA' %}selected{% endif %}>NA</option>
+                                    </select>
+                                </div>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+
+
+                </form>
+           </div>
+        </div>
+        <div class="row">
+            <p> Осталось {{ params.num_candidates }} ручных проверок (без учета перекрытия).
+        </div>
+        <div class="row">
+                <div class="col-sm-4">
+                </div>
+                <div class="col-sm-4">
+                    <button type="submit" class="btn btn-danger btn-xlarge" style="font-size: 36px" name="status" value="manual" data-disable="false">
+                        <i class="icon-columns"></i>  Ручная проверка
+                    </button>
+                </div>
+                <div class="col-sm-4">
+                    <button type="submit" class="btn btn-success btn-xlarge" style="font-size: 36px" name="status" value="ok">
+                        <i class="icon-columns"></i>  Отправить
+                    </button>
+                </div>
+        </div>
+        {% endif %}
+    </form></div>
+    <br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br>
+</div>
+
+<br>
+
+
+
+  </body>
+</html>
+
+

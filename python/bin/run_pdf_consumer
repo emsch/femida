@@ -1,0 +1,132 @@
+#!/usr/bin/env python3
+
+import pymongo.errors
+import argparse
+import os
+import logging
+import persistqueue
+import femida_detect
+
+STATUS_IN_PROGRESS = 'OCR in progress'
+STATUS_ERROR = 'OCR errored'
+STATUS_COMPLETE = 'OCR complete'
+STATUS_IN_QUEUE = 'in queue for OCR'
+STATUS_PARTIALLY_COMPLETE = 'OCR partially complete'
+ANSWERS = 'answers'
+PDFS = 'pdfs'
+DB = 'femida'
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--host', type=str, default='localhost')
+parser.add_argument('--port', type=int, default=27017)
+parser.add_argument('--log-to', type=str,
+                    help='path to logfile')
+parser.add_argument('--root', type=str, required=True,
+                    help='path to local queue')
+parser.add_argument('--max-errors', type=int, default=1)
+parser.add_argument('--critical-errors', type=int, default=2)
+parser.add_argument('--debug', action='store_true')
+logger = logging.getLogger('consumer :: pdf')
+
+
+def finalize(t, out_queue):
+    for i, imagef in enumerate(t['result']):
+        task_ = dict(
+            UUID=t['UUID'],
+            _id=t['_id'],
+            i=i + 1,
+            total=len(t['result']),
+            errors=0,
+            imagef=imagef
+        )
+        out_queue.put(task_)
+    logger.info(f"Task _id={t['_id']} :: {len(t['result'])} images have been put in out queue")
+
+
+def handle_error(t, e, pdfs, queue, args):
+    logger.error(f"Task _id={t['_id']} :: status :: {STATUS_ERROR} :: {e}")
+    t['errors'] += 1
+    if t['errors'] > args.max_errors:
+        logger.debug(f"Task _id={t['_id']} :: maximum errors")
+        pdfs.update_one(
+            {'_id': t['_id']},
+            {'$set': {'status': STATUS_ERROR}}
+        )
+    else:
+        logger.debug(f"Task _id={t['_id']} :: retry {t['errors']}/{args.max_errors}")
+        queue.put(t)
+
+
+def main(args):
+    queue = persistqueue.SQLiteQueue(
+        os.path.join(args.root, 'pdf'))
+    logger.info(f'Opened PDF Queue {queue.path}')
+    pdf_status = persistqueue.PDict(
+        os.path.join(args.root, 'pdf.status'), 'pdf'
+    )
+    logger.info(f'Opened PDF Status Dict {pdf_status.path}')
+    out_queue = persistqueue.SQLiteQueue(
+        os.path.join(args.root, 'answers'))
+    logger.info(f'Opened Answers Queue {out_queue.path}')
+    out_path = os.path.join(args.root, 'answers', 'img')
+    os.makedirs(out_path, exist_ok=True)
+    logger.info(f'Storing intermediate images in {out_path}')
+    logger.info(f'Connecting to {args.host}:{args.port} with provided credentials')
+    conn = pymongo.MongoClient(
+        host=args.host,
+        port=args.port,
+        username=os.environ.get('MONGODB_USERNAME'),
+        password=os.environ.get('MONGODB_PASSWORD')
+    )
+    pdfs = conn[DB][PDFS]
+    logger.info(f'Started listening')
+    critical_fails_left = args.critical_errors
+    while True:
+        task = queue.get()
+        try:
+            if 'result' in task:
+                finalize(task, out_queue)
+                continue
+            logger.info(f"Got new task _id={task['_id']}")
+            pdfs.update_one(
+                {'_id': task['_id']},
+                {'$set': {'status': STATUS_IN_PROGRESS}}
+            )
+            logger.debug(f"Task _id={task['_id']} :: pdf_to_images_silent")
+            images = femida_detect.pdf2img.pdf_to_images_silent(
+                task['path'],
+                os.path.join(out_path, f"{task['UUID']}__%03d.png")
+            )
+            logger.debug(f"Task _id={task['_id']} :: converted to {len(images)} images")
+            task['result'] = images
+            pdf_status[task['UUID']] = set()
+            finalize(task, out_queue)
+        except RuntimeError as e:
+            handle_error(task, e, pdfs, queue, args)
+            continue
+        except pymongo.errors.PyMongoError as e:
+            logger.error(f"Task _id={task['_id']} :: recoverable (restart) :: %s", e)
+            queue.put(task)
+            break
+        except Exception as e:
+            logger.critical(f"Task _id={task['_id']} :: {e}")
+            if critical_fails_left == 0:
+                queue.put(task)
+                raise
+            critical_fails_left -= 1
+            handle_error(task, e, pdfs, queue, args)
+            continue
+
+
+if __name__ == '__main__':
+    pargs = parser.parse_args()
+    formatter = logging.Formatter('%(asctime)s :: %(name)s :: %(levelname)s - %(message)s')
+    if pargs.log_to is not None:
+        handle = logging.FileHandler(pargs.log_to)
+    else:
+        handle = logging.StreamHandler()
+    handle.setFormatter(formatter)
+    logger.addHandler(handle)
+    if pargs.debug or os.environ.get('FEMIDA_DEBUG', False):
+        logger.setLevel(logging.DEBUG)
+    main(pargs)

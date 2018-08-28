@@ -1,0 +1,71 @@
+version: '3'
+
+services:
+  mongodb:
+    image: mongo:latest
+    restart: always
+    volumes:
+      - ./docker/data:/data/db
+      - ./mongo/mongod.conf:/etc/mongo/mongod.conf
+    ports:
+      - 27017:27017
+    command: mongod --smallfiles --config /etc/mongo/mongod.conf
+
+  frontend:
+    build:
+      context: frontend
+    restart: always
+    environment:
+      - MONGO_HOST=mongodb
+    env_file:
+      - envfile
+      - secret
+    depends_on:
+      - mongodb
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - ./docker/media/:/media/
+      - ./frontend/nginx/femida.conf:/etc/nginx/conf.d/nginx.conf.template
+
+  ocr_producer:
+    build:
+      context: python
+    restart: always
+    env_file:
+      - envfile
+    volumes:
+      - ./docker/detect:/var/femida_detect
+      - ./docker/media/:/media/
+    command: run_producer --root=/var/femida_detect --scan-first --host=mongodb --initrs
+    depends_on:
+      - mongodb
+
+  pdf_consumer:
+    build:
+      context: python
+    restart: always
+    env_file:
+      - envfile
+    volumes:
+      - ./docker/detect:/var/femida_detect
+      - ./docker/media/:/media/
+    command: run_pdf_consumer --root=/var/femida_detect --host=mongodb
+    depends_on:
+      - ocr_producer
+
+  answers_consumer:
+    build:
+      context: python
+    restart: always
+    env_file:
+      - envfile
+    volumes:
+      - ./docker/media/:/media/
+      - ./docker/detect:/var/femida_detect
+      - ./model:/model
+    command: run_answers_consumer --root=/var/femida_detect --host=mongodb --model-path=/model/model.t7
+    depends_on:
+      - pdf_consumer
+

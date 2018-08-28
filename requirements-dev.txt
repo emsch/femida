@@ -1,4 +1,0 @@
-pytest
-pylint
-pycodestyle
-pytest-helpers-namespace
