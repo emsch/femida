@@ -12,11 +12,11 @@ from filelock import FileLock
 
 
 parser = argparse.ArgumentParser()
-STATUS_IN_PROGRESS = 'ICR in progress'
-STATUS_ERROR = 'ICR errored'
-STATUS_COMPLETE = 'ICR complete'
-STATUS_IN_QUEUE = 'in queue for ICR'
-STATUS_PARTIALLY_COMPLETE = 'ICR partially complete'
+STATUS_IN_PROGRESS = 'OCR in progress'
+STATUS_ERROR = 'OCR errored'
+STATUS_COMPLETE = 'OCR complete'
+STATUS_IN_QUEUE = 'in queue for OCR'
+STATUS_PARTIALLY_COMPLETE = 'OCR partially complete'
 ANSWERS = 'answers'
 PDFS = 'pdfs'
 DB = 'femida'
@@ -30,7 +30,7 @@ parser.add_argument('--root', type=str, required=True,
 parser.add_argument('--model-path', type=str, required=True)
 parser.add_argument('--max-errors', type=int, default=1)
 parser.add_argument('--critical-errors', type=int, default=2)
-parser.add_argument('--save-path', type=str, default='/media/pdf_uploads/')
+parser.add_argument('--save-path', type=str, default=os.environ.get('RESULTS_FOLDER', '/media/ocr_results/'))
 parser.add_argument('--cuda', action='store_true')
 parser.add_argument('--debug', action='store_true')
 logger = logging.getLogger('consumer :: answers')
@@ -98,7 +98,7 @@ def handle_error(task, error, pdf_status, args):
 
 
 def main(args):
-    logger.info(f'storing icr results here: {args.save_path}')
+    logger.info(f'storing ocr results here: {args.save_path}')
     os.makedirs(args.save_path, exist_ok=True)
     queue = persistqueue.SQLiteQueue(
         os.path.join(args.root, 'answers'))
@@ -112,8 +112,8 @@ def main(args):
     conn = pymongo.MongoClient(
         host=args.host,
         port=args.port,
-        username=os.environ.get('MONGO_USER'),
-        password=os.environ.get('MONGO_PASSWORD')
+        username=os.environ.get('MONGODB_USERNAME'),
+        password=os.environ.get('MONGODB_PASSWORD')
     )
     pdfs = conn[DB][PDFS]
     answers = conn[DB][ANSWERS]
@@ -127,12 +127,12 @@ def main(args):
             logger.info(f"Got new task _id={task['_id']} :: {task['i']}")
             if 'result' in task:
                 with lock:
-                    finalize(task, pdfs, answers, queue)
+                    finalize(task, pdfs, answers, queue, pdf_status)
                 continue
             image = cv2.imread(task['imagef'])
             test_results = dict.fromkeys(list(map(str, range(1, 41))), '')
             test_updates = [{
-                'sessoin_id': 'icr', 'updates': {}, 'date': datetime.datetime.now()}
+                'sessoin_id': 'ocr', 'updates': {}, 'date': datetime.datetime.now()}
             ]
             result = dict(
                 personal=[],

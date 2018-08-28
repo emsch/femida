@@ -26,7 +26,8 @@ from werkzeug.utils import secure_filename
 
 # directories are created in prestart.sh file
 UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER', '/media/pdf_uploads/')
-RESULTS_FOLDER = os.environ.get('RESULTS_FOLDER', '/media/icr_results/')
+RESULTS_FOLDER = os.environ.get('RESULTS_FOLDER', '/media/ocr_results/')
+MONGO_HOST = os.environ.get('MONGO_HOST', 'localhost')
 ALLOWED_EXTENSIONS = {'pdf'}
 
 
@@ -35,7 +36,7 @@ app = Flask(__name__, static_url_path='')
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 app.config['SESSION_TYPE'] = 'memcached'
-app.config["MONGO_URI"] = "mongodb://mongodb:27017/femida"
+app.config["MONGO_URI"] = f"mongodb://{MONGO_HOST}:27017/femida"
 app.secret_key = os.environ['FEMIDA_SECRET_KEY']
 app.debug = os.environ.get('FEMIDA_DEBUG', False)
 
@@ -86,7 +87,7 @@ def send_img(path):
 
 
 @app.route(f'/media/{RESULTS_FOLDER}/<path:path>')
-def send_icr_img(path):
+def send_ocr_img(path):
     return send_from_directory('img', path)
 
 
@@ -113,7 +114,7 @@ def serve_form():
     candidate = candidates.next()
 
     if len(candidate['test_updates']) > 0:
-        updates = candidate['test_updates'][-1]['updates'].items()
+        updates = list(candidate['test_updates'][-1]['updates'].items())
     # if len(candidate['test_results']['updates']) > 0:
     #     updates = candidate['test_results']['updates'][-1].items()
     #     updates = filter(lambda row: row[0].isdigit(), updates)
@@ -244,7 +245,7 @@ def handle_pdf():
     inserted = pdfs.insert_one({
         "UUID": uid,
         "path": path,
-        "status": 'waiting for ICR',
+        "status": 'waiting for OCR',
         "date": datetime.datetime.utcnow(),
         "session_id": current_user.get_id()
     })

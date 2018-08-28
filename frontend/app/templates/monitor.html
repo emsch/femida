@@ -27,23 +27,23 @@
              console.log(obj.text, obj);
              var pdf = obj.pdf_statuses;
 
-            $('.error-pdf').css('width', pdf['ICR errored'] || 0+'%').attr('aria-valuenow', pdf['ICR errored']);
-            $('.error-pdf-label').text(pdf['ICR errored'] || 0);
+            $('.error-pdf').css('width', pdf['OCR errored'] || 0+'%').attr('aria-valuenow', pdf['OCR errored']);
+            $('.error-pdf-label').text(pdf['OCR errored'] || 0);
 
-            $('.waiting-pdf').css('width', pdf['waiting for ICR'] || 0+'%').attr('aria-valuenow', pdf['waiting for ICR']);
-            $('.waiting-pdf-label').text(pdf['waiting for ICR'] || 0);
+            $('.waiting-pdf').css('width', pdf['waiting for OCR'] || 0+'%').attr('aria-valuenow', pdf['waiting for OCR']);
+            $('.waiting-pdf-label').text(pdf['waiting for OCR'] || 0);
 
-            $('.in-queue-pdf').css('width', pdf['in queue for ICR'] || 0+'%').attr('aria-valuenow', pdf['in queue for ICR']);
-            $('.in-queue-pdf-label').text(pdf['in queue for ICR'] || 0);
+            $('.in-queue-pdf').css('width', pdf['in queue for OCR'] || 0+'%').attr('aria-valuenow', pdf['in queue for OCR']);
+            $('.in-queue-pdf-label').text(pdf['in queue for OCR'] || 0);
 
-            $('.in-progress-pdf').css('width', pdf['ICR in progress'] || 0+'%').attr('aria-valuenow', pdf['ICR in progress']);
-            $('.in-progress-pdf-label').text(pdf['ICR in progress'] || 0);
+            $('.in-progress-pdf').css('width', pdf['OCR in progress'] || 0+'%').attr('aria-valuenow', pdf['OCR in progress']);
+            $('.in-progress-pdf-label').text(pdf['OCR in progress'] || 0);
 
-            $('.partially-complete-pdf').css('width', pdf['ICR partially complete'] || 0+'%').attr('aria-valuenow', pdf['ICR partially complete']);
-            $('.partially-complete-pdf-label').text(pdf['ICR partially complete'] || 0);
+            $('.partially-complete-pdf').css('width', pdf['OCR partially complete'] || 0+'%').attr('aria-valuenow', pdf['OCR partially complete']);
+            $('.partially-complete-pdf-label').text(pdf['OCR partially complete'] || 0);
 
-            $('.success-pdf').css('width', pdf['ICR complete'] || 0+'%').attr('aria-valuenow', pdf['ICR complete']);
-            $('.success-pdf-label').text(pdf['ICR complete'] || 0);
+            $('.success-pdf').css('width', pdf['OCR complete'] || 0+'%').attr('aria-valuenow', pdf['OCR complete']);
+            $('.success-pdf-label').text(pdf['OCR complete'] || 0);
 
         };
     </script>
@@ -99,27 +99,27 @@ target="blank">http://bradfrostweb.com/blog/post/float-label-pattern/</a></small
             <div class="col-sm-12">
                 <h2>Отсканированные PDF</h2>
                   <div class="progress">
-                      <a href='/mongo/db/femida/pdfs?key=status&value=ICR+errored&type=S' target="_blank"> <div class="progress-bar progress-bar-danger error-pdf" role="progressbar" aria-valuenow="70"
+                      <a href='/mongo/db/femida/pdfs?key=status&value=OCR+errored&type=S' target="_blank"> <div class="progress-bar progress-bar-danger error-pdf" role="progressbar" aria-valuenow="70"
                       aria-valuemin="0" aria-valuemax="100" style="width:0%">
                         <span class="error-pdf-label">0</span>
                       </div></a>
-                      <a href='/mongo/db/femida/pdfs?key=status&value=waiting+for+ICR&type=S' target="_blank"> <div class="progress-bar progress-bar-info waiting-pdf" role="progressbar" aria-valuenow="50"
+                      <a href='/mongo/db/femida/pdfs?key=status&value=waiting+for+OCR&type=S' target="_blank"> <div class="progress-bar progress-bar-info waiting-pdf" role="progressbar" aria-valuenow="50"
                       aria-valuemin="0" aria-valuemax="100" style="width:0%">
                         <span class="waiting-pdf-label">0</span>
                       </div></a>
-                      <a href='/mongo/db/femida/pdfs?key=status&value=in queue+for+ICR&type=S' target="_blank"> <div class="progress-bar progress-bar-info in-queue-pdf" role="progressbar" aria-valuenow="50"
+                      <a href='/mongo/db/femida/pdfs?key=status&value=in+queue+for+OCR&type=S' target="_blank"> <div class="progress-bar progress-bar-info in-queue-pdf" role="progressbar" aria-valuenow="50"
                       aria-valuemin="0" aria-valuemax="100" style="width:0%">
                         <span class="in-queue-pdf-label">0</span>
                       </div></a>
-                      <a href='/mongo/db/femida/pdfs?key=status&value=ICR+in+progress&type=S' target="_blank"> <div class="progress-bar progress-bar-striped progress-bar-info active in-progress-pdf" role="progressbar" aria-valuenow="50"
+                      <a href='/mongo/db/femida/pdfs?key=status&value=OCR+in+progress&type=S' target="_blank"> <div class="progress-bar progress-bar-striped progress-bar-info active in-progress-pdf" role="progressbar" aria-valuenow="50"
                       aria-valuemin="0" aria-valuemax="100" style="width:0%">
                         <span class="in-progress-pdf-label">0</span>
                       </div></a>
-                      <a href='/mongo/db/femida/pdfs?key=status&value=ICR+partially+complete&type=S' target="_blank"> <div class="progress-bar progress-bar-warning partially-complete-pdf" role="progressbar" aria-valuenow="60"
+                      <a href='/mongo/db/femida/pdfs?key=status&value=OCR+partially+complete&type=S' target="_blank"> <div class="progress-bar progress-bar-warning partially-complete-pdf" role="progressbar" aria-valuenow="60"
                       aria-valuemin="0" aria-valuemax="100" style="width:0%">
                         <span class="partially-complete-pdf-label">0</span>
                       </div></a>
-                      <a href='/mongo/db/femida/pdfs?key=status&value=ICR+complete&type=S' target="_blank"> <div class="progress-bar progress-bar-success success-pdf" role="progressbar" aria-valuenow="40"
+                      <a href='/mongo/db/femida/pdfs?key=status&value=OCR+complete&type=S' target="_blank"> <div class="progress-bar progress-bar-success success-pdf" role="progressbar" aria-valuenow="40"
                       aria-valuemin="0" aria-valuemax="100" style="width:0%">
                         <span class="success-pdf-label">0</span>
                       </di</a>

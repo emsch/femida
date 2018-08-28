@@ -7,8 +7,8 @@ import os
 import logging
 import persistqueue
 
-STATUS_WAITING = 'waiting for ICR'
-STATUS_IN_QUEUE = 'in queue for ICR'
+STATUS_WAITING = 'waiting for OCR'
+STATUS_IN_QUEUE = 'in queue for OCR'
 DB = 'femida'
 PDFS = 'pdfs'
 
@@ -34,8 +34,8 @@ def main(args):
     conn = pymongo.MongoClient(
         host=args.host,
         port=args.port,
-        username=os.environ.get('MONGO_USER'),
-        password=os.environ.get('MONGO_PASSWORD')
+        username=os.environ.get('MONGODB_USERNAME'),
+        password=os.environ.get('MONGODB_PASSWORD')
     )
     pdfs = conn[DB][PDFS]
     try:
@@ -80,7 +80,7 @@ def main(args):
     except pymongo.errors.PyMongoError as e:
         # The ChangeStream encountered an unrecoverable error or the
         # resume attempt failed to recreate the cursor.
-        logger.error(f"Task _id={task['_id']} :: recoverable (restart with --scan-first) :: %s", e)
+        logger.error(f"Recoverable (restart with --scan-first) :: %s", e)
 
 
 if __name__ == '__main__':

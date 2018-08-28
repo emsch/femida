@@ -107,7 +107,6 @@ venv.bak/
 .idea/
 .DS_Store
 data/
-!python/tests/data/
 notebooks/
 Makefile
 exman/
@@ -116,4 +115,4 @@ local.cfg
 python/tests/out/
 docker/
 secret
-model
+Dockerfile

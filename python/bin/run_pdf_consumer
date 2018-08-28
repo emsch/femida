@@ -7,11 +7,11 @@ import logging
 import persistqueue
 import femida_detect
 
-STATUS_IN_PROGRESS = 'ICR in progress'
-STATUS_ERROR = 'ICR errored'
-STATUS_COMPLETE = 'ICR complete'
-STATUS_IN_QUEUE = 'in queue for ICR'
-STATUS_PARTIALLY_COMPLETE = 'ICR partially complete'
+STATUS_IN_PROGRESS = 'OCR in progress'
+STATUS_ERROR = 'OCR errored'
+STATUS_COMPLETE = 'OCR complete'
+STATUS_IN_QUEUE = 'in queue for OCR'
+STATUS_PARTIALLY_COMPLETE = 'OCR partially complete'
 ANSWERS = 'answers'
 PDFS = 'pdfs'
 DB = 'femida'
@@ -75,8 +75,8 @@ def main(args):
     conn = pymongo.MongoClient(
         host=args.host,
         port=args.port,
-        username=os.environ.get('MONGO_USER'),
-        password=os.environ.get('MONGO_PASSWORD')
+        username=os.environ.get('MONGODB_USERNAME'),
+        password=os.environ.get('MONGODB_PASSWORD')
     )
     pdfs = conn[DB][PDFS]
     logger.info(f'Started listening')

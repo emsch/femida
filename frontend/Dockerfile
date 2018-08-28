@@ -3,11 +3,11 @@ MAINTAINER Maxim Kochurov
 
 COPY app/requirements-frontend.txt /tmp/requirements-frontend.txt
 RUN pip3 install --upgrade pip && \
-    pip3 install --no-cache-dir -r /tmp/requirements-frontend.txt && \
+    pip3 install --no-cache-dir -U -r /tmp/requirements-frontend.txt && \
     rm /tmp/requirements-frontend.txt
 VOLUME /media
 COPY nginx/femida.conf /etc/nginx/conf.d/nginx.conf.template
-COPY nginx/ssl.conf /etc/nginx/ssl.conf
+COPY nginx/ /etc/nginx/
 COPY app /app
 
 EXPOSE 80 443
