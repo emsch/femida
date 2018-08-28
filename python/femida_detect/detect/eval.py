@@ -13,5 +13,5 @@ def load(path, device='cpu'):
     def predict(cropped):
         return (net(torch.from_numpy(
             cropped.get_rectangles_array(model['meta']['init_params']['input_size'])
-        )) < .5).numpy()
+        ).to(device)) < .5).cpu().numpy()
     return predict
