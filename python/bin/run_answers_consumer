@@ -41,13 +41,14 @@ def finalize(t, pdfs, answers, queue, pdf_status):
     This should be only called if the result is ready to submit
     This is also should be called with lock
     """
-    all_tasks = set(range(t['total']))
+    all_tasks = set(range(1, t['total']+1))
+    complete_and_errors = pdf_status[t['UUID']]
     # some tasks are left
-    if len(all_tasks - pdf_status[t['UUID']]):
+    if len(all_tasks - complete_and_errors):
         update = None
     # there are some errors
-    elif len(pdf_status[t['UUID']] - all_tasks) > 0:
-        if len(pdf_status[t['UUID']] - set(range(t['total']))) < t['total']:
+    elif len(complete_and_errors - all_tasks) > 0:
+        if len(complete_and_errors - all_tasks) < t['total']:
             logger.info(f"Task _id={t['_id']} :: status :: {STATUS_PARTIALLY_COMPLETE}")
             update = {'$set': {'status': STATUS_PARTIALLY_COMPLETE}}
         else:
@@ -209,6 +210,6 @@ if __name__ == '__main__':
         handle = logging.StreamHandler()
     handle.setFormatter(formatter)
     logger.addHandler(handle)
-    if pargs.debug:
+    if pargs.debug or os.environ.get('FEMIDA_DEBUG', False):
         logger.setLevel(logging.DEBUG)
     main(pargs)

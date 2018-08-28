@@ -2,3 +2,4 @@ UPLOAD_FOLDER=/media/pdf_uploads/
 RESULTS_FOLDER=/media/ocr_results/
 SERVER_NAME=localhost
 MONGODB_DATABASE=femida
+FEMIDA_DEBUG=1

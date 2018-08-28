@@ -99,6 +99,6 @@ if __name__ == '__main__':
         handle = logging.StreamHandler()
     handle.setFormatter(formatter)
     logger.addHandler(handle)
-    if pargs.debug:
+    if pargs.debug or os.environ.get('FEMIDA_DEBUG', False):
         logger.setLevel(logging.DEBUG)
     main(pargs)
