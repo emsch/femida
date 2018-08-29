@@ -22,7 +22,8 @@ def setup_rs():
         return True
     else:
         try:
-            conn.admin.command("replSetInitiate")
+            config = {'_id': 'rs0', 'members': [{'_id': 0, 'host': 'localhost:27017'}]}
+            conn.admin.command("replSetInitiate", config)
             logger.info('Initiating replica set with implicit configuration')
             return True
         except pymongo.errors.OperationFailure:
