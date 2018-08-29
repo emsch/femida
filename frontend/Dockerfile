@@ -8,5 +8,5 @@ RUN pip3 install --upgrade pip && \
 VOLUME /media
 COPY app /app
 COPY nginx/femida.conf /etc/nginx/conf.d/nginx.conf.template
-
+COPY nginx/drop.conf /etc/nginx/drop.conf
 EXPOSE 80 443
