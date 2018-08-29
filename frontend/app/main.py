@@ -108,11 +108,17 @@ def serve_form():
         ]}
     )
     num_candidates = candidates.count()
-    if num_candidates == 0:
+    K = 10
+    HK = (hash(current_user.get_id()) ^ num_candidates) % K
+    last = None
+    for candidate in candidates:
+        last = candidate
+        RK = (hash(candidate['_id']) ^ num_candidates) % K
+        if RK == HK:
+            break
+    candidate = last
+    if candidate is None:
         return render_template('form.html', no_more_candidates=True)
-
-    candidate = candidates.next()
-
     if len(candidate['test_updates']) > 0:
         updates = list(candidate['test_updates'][-1]['updates'].items())
     # if len(candidate['test_results']['updates']) > 0:
