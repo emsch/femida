@@ -19,7 +19,6 @@ parser.add_argument('--host', type=str, default='localhost')
 parser.add_argument('--port', type=int, default=27017)
 parser.add_argument('--log-to', type=str,
                     help='path to logfile')
-parser.add_argument('--initrs', action='store_true')
 parser.add_argument('--root', type=str, required=True,
                     help='path to local queue')
 parser.add_argument('--scan-first', action='store_true')

@@ -52,7 +52,7 @@ services:
     volumes:
       - detect:/var/femida_detect
       - media:/media/
-    command: run_producer --root=/var/femida_detect --scan-first --host=mongodb --initrs
+    command: run_producer --root=/var/femida_detect --scan-first --host=mongodb
     depends_on:
       - mongodb
 
