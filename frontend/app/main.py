@@ -176,7 +176,7 @@ def process_updates(form, date, session_id):
 
 @app.route('/process_form', methods=['POST'])
 def handle_data():
-    form = dict(request.form.iteritems())
+    form = dict(request.form.items())
     if not valid_form(form):
         flash(u'ОШИБКА: неверное расширение у файла или название')
         return redirect(url_for('serve_form'))

@@ -6,6 +6,7 @@ import argparse
 import os
 import logging
 import persistqueue
+import time
 
 STATUS_WAITING = 'waiting for OCR'
 STATUS_IN_QUEUE = 'in queue for OCR'
@@ -26,6 +27,25 @@ parser.add_argument('--debug', action='store_true')
 logger = logging.getLogger('producer')
 
 
+def setup_rs(conn):
+    try:
+        status = conn.admin.command("replSetGetStatus")
+    except pymongo.errors.OperationFailure:
+        logger.debug('Failed to configure replica set')
+        status = dict(ok=0)
+    if status['ok']:
+        logger.debug('Replica set is already configured')
+        return True
+    else:
+        try:
+            conn.admin.command("replSetInitiate")
+            logger.info('Initiating replica set with implicit configuration')
+            return True
+        except pymongo.errors.OperationFailure:
+            logger.debug('Failed to configure replica set')
+            return False
+
+
 def main(args):
     queue = persistqueue.SQLiteQueue(
         os.path.join(args.root, 'pdf')
@@ -38,12 +58,8 @@ def main(args):
         username=os.environ.get('MONGODB_USERNAME'),
         password=os.environ.get('MONGODB_PASSWORD')
     )
-    if args.initrs:
-        try:
-            conn.admin.command("replSetInitiate")
-            logger.info('Initiating replica set with implicit configuration')
-        except pymongo.errors.OperationFailure:
-            logger.warning('Replica set is already configured')
+    while not setup_rs(conn):
+        time.sleep(10)
     pdfs = conn[DB][PDFS]
     try:
         if args.scan_first:
