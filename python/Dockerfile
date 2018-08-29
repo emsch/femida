@@ -1,5 +1,4 @@
 FROM anibali/pytorch:no-cuda
-USER root
 RUN sudo apt-get update && \
     sudo apt-get install -y \
     python-opencv \
@@ -18,4 +17,5 @@ VOLUME /var/femida_detect
 VOLUME /media
 COPY . /femida_detect
 WORKDIR /femida_detect
+USER root
 RUN pip install -e . --no-deps && py.test && rm -rf tests/
