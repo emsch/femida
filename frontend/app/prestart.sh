@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 mkdir -p "$UPLOAD_FOLDER"
 mkdir -p "$RESULTS_FOLDER"
-envsubst < /etc/nginx/conf.d/nginx.conf.template > /etc/nginx/conf.d/nginx.conf
+python configure_nginx.py

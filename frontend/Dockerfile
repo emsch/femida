@@ -7,5 +7,6 @@ RUN pip3 install --upgrade pip && \
     rm /tmp/requirements-frontend.txt
 VOLUME /media
 COPY app /app
+COPY nginx/femida.conf /etc/nginx/conf.d/nginx.conf.template
 
 EXPOSE 80 443
