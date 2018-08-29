@@ -133,7 +133,7 @@ def main(args):
             image = cv2.imread(task['imagef'])
             test_results = dict.fromkeys(list(map(str, range(1, 41))), '')
             test_updates = [{
-                'sessoin_id': 'ocr', 'updates': {}, 'date': datetime.datetime.now()}
+                'session_id': 'ocr', 'updates': {}, 'date': datetime.datetime.now()}
             ]
             result = dict(
                 personal=[],
