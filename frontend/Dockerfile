@@ -6,7 +6,9 @@ RUN pip3 install --upgrade pip && \
     pip3 install --no-cache-dir -U -r /tmp/requirements-frontend.txt && \
     rm /tmp/requirements-frontend.txt
 VOLUME /media
+VOLUME /etc/nginx/ssl
 COPY app /app
-COPY nginx/femida.conf /etc/nginx/conf.d/nginx.conf.template
+COPY nginx/femida.conf.template /etc/nginx/conf.d/nginx.conf.template
+COPY nginx/ssl.conf /etc/nginx/ssl.conf
 COPY nginx/drop.conf /etc/nginx/drop.conf
 EXPOSE 80 443

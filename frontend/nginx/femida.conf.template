@@ -1,11 +1,21 @@
+{% if FEMIDA_SSL %}
 server {
-    # listen    *:443;
-    listen    *:80;
-    client_max_body_size 16M;
+    listen 80;
+    listen [::]:80;
+    server_name {{ SERVER_NAME }};
+    return 301 https://{{ SERVER_NAME }}$request_uri;
+}
+{% endif %}
+server {
     {% if FEMIDA_SSL %}
+    listen 443 ssl;
+    listen [::]:443 ssl;
     include /etc/nginx/ssl.conf;
-    rewrite ^ https://$http_host$request_uri? permanent;
+    {% else %}
+    listen 80;
+    listen [::]:80;
     {% endif %}
+    client_max_body_size 16M;
     include /etc/nginx/drop.conf;
     server_name {{ SERVER_NAME }};
 

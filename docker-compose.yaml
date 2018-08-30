@@ -41,7 +41,6 @@ services:
     volumes:
       - media:/media/
       - ./ssl/:/etc/nginx/ssl/
-      - ./frontend/nginx/femida.conf:/etc/nginx/conf.d/nginx.conf.template
 
   ocr_producer:
     build:
