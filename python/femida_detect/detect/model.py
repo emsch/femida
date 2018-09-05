@@ -107,8 +107,30 @@ class Modelv3(nn.Module):
         return x
 
 
+class Ensemble(nn.Module):
+    def __init__(self, v, n, input_dim=1, input_size=32, output_dim=1):
+        assert v != 'ensemble'
+        assert n >= 1
+        super().__init__()
+        for i in range(n):
+            self.add_module(
+                str(i),
+                select['v%s' % v](
+                    input_dim=input_dim,
+                    input_size=input_size,
+                    output_dim=output_dim)
+            )
+
+    def forward(self, x):
+        preds = 0.
+        for model in self._modules.values():
+            preds += model(x)
+        return preds / len(self._modules)
+
+
 select = dict(
     v1=Modelv1,
     v2=Modelv2,
-    v3=Modelv3
+    v3=Modelv3,
+    ensemble=Ensemble
 )
