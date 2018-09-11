@@ -151,10 +151,8 @@ def export():
                         question.update(update['updates'][str(q)])
                 worksheet.write(1+row, start+q-1, *question.get_res_style())
                 col()
-            worksheet.write(1+row, col(), json.dumps(r, default=json_util.default))
+            worksheet.write(1+row, col(), json.dumps(r, default=json_util.default))    
 
-            
-            
         except:
             worksheet.write(1+row, 0, 'ERROR OCCURED.')
             raise
