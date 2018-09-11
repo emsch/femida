@@ -11,6 +11,7 @@ from flask import (
     render_template,
     redirect, url_for,
     flash, Response,
+    jsonify,
     stream_with_context
 )
 from flask_login import (
@@ -40,7 +41,8 @@ app.config["MONGO_URI"] = f"mongodb://{MONGO_HOST}:27017/femida"
 app.secret_key = os.environ['FEMIDA_SECRET_KEY']
 app.debug = os.environ.get('FEMIDA_DEBUG', False)
 
-mongo = PyMongo(app)
+from database import mongo
+mongo.init_app(app)
 pdfs = mongo.db.pdfs
 answers = mongo.db.answers
 
@@ -338,6 +340,10 @@ def manager_flow():
 @login_required
 def serve_monitor():
     return render_template('monitor.html')
+
+
+from export import mod_export as export_module
+app.register_blueprint(export_module)
 
 
 if __name__ == "__main__":
