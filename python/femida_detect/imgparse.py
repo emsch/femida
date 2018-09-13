@@ -3,10 +3,6 @@ import numpy as np
 import json
 import functools
 import collections
-try:
-    from pyzbar import pyzbar
-except ImportError:
-    pyzbar = NotImplemented
 import itertools
 
 from .utils import listit
@@ -101,7 +97,7 @@ def crop_image(image):
         box = np.int0(box)
 
         # no noise condition
-        if (rect[1][0] > 40) and (rect[1][1] > 40):
+        if (rect[1][0] > 80) and (rect[1][1] > 80):
             statistics = get_statistics(image, box)
             if np.mean(statistics) < 100:
                 allowed_boxes.append(rect)
@@ -156,8 +152,12 @@ def get_small_rectangles(image, xlim=(-np.inf, np.inf), ylim=(-np.inf, np.inf)):
 
 
 def validate_qr_code(image):
+    from pyzbar import pyzbar
     barcodes = pyzbar.decode(image)
-    return json.loads(barcodes[0].data.decode("utf-8"))
+    if barcodes:
+        return json.loads(barcodes[0].data.decode("utf-8"))
+    else:
+        return {}
 
 
 class CroppedAnswers(object):

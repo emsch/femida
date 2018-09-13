@@ -78,6 +78,7 @@ def main(args):
         username=os.environ.get('MONGODB_USERNAME'),
         password=os.environ.get('MONGODB_PASSWORD')
     )
+    femida_detect.utils.setup_rs(conn, logger)
     pdfs = conn[DB][PDFS]
     logger.info(f'Started listening')
     critical_fails_left = args.critical_errors

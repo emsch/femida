@@ -6,7 +6,7 @@ import argparse
 import os
 import logging
 import persistqueue
-import time
+from femida_detect.utils import setup_rs
 
 STATUS_WAITING = 'waiting for OCR'
 STATUS_IN_QUEUE = 'in queue for OCR'
@@ -26,26 +26,6 @@ parser.add_argument('--debug', action='store_true')
 logger = logging.getLogger('producer')
 
 
-def setup_rs(conn):
-    try:
-        status = conn.admin.command("replSetGetStatus")
-    except pymongo.errors.OperationFailure:
-        logger.debug('Failed to configure replica set')
-        status = dict(ok=0)
-    if status['ok']:
-        logger.debug('Replica set is already configured')
-        return True
-    else:
-        try:
-            config = {'_id': 'rs0', 'members': [{'_id': 0, 'host': 'localhost:27017'}]}
-            conn.admin.command("replSetInitiate", config)
-            logger.info('Initiating replica set with implicit configuration')
-            return True
-        except pymongo.errors.OperationFailure:
-            logger.debug('Failed to configure replica set')
-            return False
-
-
 def main(args):
     queue = persistqueue.SQLiteQueue(
         os.path.join(args.root, 'pdf')
@@ -58,8 +38,7 @@ def main(args):
         username=os.environ.get('MONGODB_USERNAME'),
         password=os.environ.get('MONGODB_PASSWORD')
     )
-    while not setup_rs(conn):
-        time.sleep(10)
+    setup_rs(conn, logger)
     pdfs = conn[DB][PDFS]
     try:
         if args.scan_first:

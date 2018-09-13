@@ -1,16 +1,16 @@
 import pytest
 import os
 import cv2
-import torch
-from femida_detect.detect import select
+from femida_detect.detect import select, eval
 from femida_detect.imgparse import (
-    crop_image, CroppedAnswers
+    CroppedAnswers
 )
 
 pytest_plugins = ['helpers_namespace']
+INPUT = ['newM.pdf', 'newOT.pdf']
 
 
-@pytest.fixture('session', params=['smallpdf.pdf'])
+@pytest.fixture('session', params=INPUT)
 def pdf(request):
     return os.path.join(
         os.path.dirname(os.path.abspath(__file__)),
@@ -19,13 +19,19 @@ def pdf(request):
     )
 
 
-@pytest.fixture('session', params=['variant.jpg'])
-def jpg(request):
-    return os.path.join(
-        os.path.dirname(os.path.abspath(__file__)),
-        'data',
-        request.param
-    )
+@pytest.fixture('session')
+def jpg(pdf):
+    return pdf + '.jpg'
+
+
+@pytest.fixture('session')
+def cropped(jpg):
+    return jpg + '.cropped.jpg'
+
+
+@pytest.fixture('session')
+def cropped_answers(cropped):
+    return CroppedAnswers.from_file(cropped)
 
 
 @pytest.helpers.register
@@ -41,19 +47,21 @@ def save_image(array, *to):
     )
 
 
-@pytest.fixture('module')
-def cropped(jpg):
-    return crop_image(cv2.imread(jpg))
-
-
-@pytest.fixture('module')
-def cropped_answers(cropped):
-    return CroppedAnswers(cropped)
-
-
-@pytest.fixture('module')
+@pytest.fixture('session')
 def model():
-    net = select['v3'](3, 28)
-    for p in net.parameters():
-        p.requires_grad = False
+    model_path = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        '..',
+        '..',
+        'model',
+        'model.t7'
+    )
+    if os.path.exists(model_path):
+        net = eval.load_net(model_path)
+    else:
+        import warnings
+        warnings.warn('model not found, using random initialization')
+        net = select['v3'](3, 28)
+        for p in net.parameters():
+            p.requires_grad = False
     return net.eval()
