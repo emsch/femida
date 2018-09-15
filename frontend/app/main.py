@@ -55,6 +55,7 @@ login_manager.login_view = "login"
 
 # Минимальное число ручных проверок (перекрытие)
 MIN_NEEDED_CHECKS = os.environ.get('FEMIDA_HAND_CHECKS', 2)
+NAMES_DATABASE_PATH = 'databases/2018_names_db.csv'
 
 
 # silly user model
@@ -339,16 +340,9 @@ def manager_flow():
     return Response(event_stream(), mimetype="text/event-stream")
 
 
-@app.route("/monitor_table.csv")
-@login_required
-def monitor_table():
-    df = pd.DataFrame([{'A':12, 'B':14}, {'A':123, 'B':234}])
-    return Response(df.to_csv(index=False), mimetype="text/text")
-
-
 COLUMNS = [
       {
-        "field": "comment", # which is the field's name of data key 
+        "field": "comment", # which is the field's name of data key
         "title": "Пачка", # display as the table header's name
         "sortable": True,
       },
@@ -401,6 +395,26 @@ def serve_monitor():
     print(data)
     # other column settings -> http://bootstrap-table.wenzhixin.net.cn/documentation/#column-options
     return render_template('monitor.html', table_data=data, table_columns=COLUMNS)
+
+
+@app.route("/get_db.json")
+@login_required
+def get_db():
+    # Возвращает базу подсказок для формы
+    names = []
+    surnames = []
+    patronymics = []
+    with open(NAMES_DATABASE_PATH) as f:
+        for line in f:
+            surname, name, patronymic = line.strip().split(';')
+            names.append(name)
+            surnames.append(surname)
+            patronymics.append(patronymic)
+        names = list(set(names))
+        surnames = list(set(surnames))
+        patronymics = list(set(patronymics))
+        return jsonify(dict(names=names, surnames=surnames, patronymics=patronymics))
+
 
 
 from export import mod_export as export_module
