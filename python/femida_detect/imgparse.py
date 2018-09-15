@@ -102,10 +102,13 @@ def crop_image(image):
             if np.mean(statistics) < 100:
                 allowed_boxes.append(rect)
 
-    nec_boxes = [min(allowed_boxes, key=lambda x: x[0][0] + x[0][1]),
-                 max(allowed_boxes, key=lambda x: x[0][0] + x[0][1]),
-                 min(allowed_boxes, key=lambda x: x[0][0] - x[0][1]),
-                 max(allowed_boxes, key=lambda x: x[0][0] - x[0][1])]
+    try:
+        nec_boxes = [min(allowed_boxes, key=lambda x: x[0][0] + x[0][1]),
+                     max(allowed_boxes, key=lambda x: x[0][0] + x[0][1]),
+                     min(allowed_boxes, key=lambda x: x[0][0] - x[0][1]),
+                     max(allowed_boxes, key=lambda x: x[0][0] - x[0][1])]
+    except ValueError as e:
+        raise cv2.error('No rectangles found') from e
 
     large = sorted(image.shape)[-1]
     small = sorted(image.shape)[-2]
