@@ -18,6 +18,14 @@
     <link href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.0/css/bootstrap.min.css" rel="stylesheet" id="bootstrap-css">
     <script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.0/js/bootstrap.min.js"></script> 
     <!------ Include the above in your HEAD tag ---------->
+    <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-table/1.11.1/bootstrap-table.min.css">
+    <script type='text/javascript' src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-table/1.11.1/bootstrap-table.min.js"></script>
+    <style type='text/css'>
+      .row-index {
+        width: 50px;
+        display: inline-block;
+      }
+    </style>
 
     <script type="text/javascript">
         var source = new EventSource('/manager_flow');
@@ -67,6 +75,8 @@ text-align:center;
 
     <!-- Latest compiled and minified JavaScript -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.12.4/js/bootstrap-select.min.js"></script>
+    <script type='text/javascript' src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-table/1.11.1/bootstrap-table.min.js"></script>
+
 
 <div class="container">
     <div class="row">
@@ -130,6 +140,17 @@ target="blank">http://bradfrostweb.com/blog/post/float-label-pattern/</a></small
                 <p><b><a href='/export'>Скачать!</a></b>
                 <p>Желтый фон - было исправление, красный фон - <b>коллизия</b>, необходимо вручную проверить.
 
+                <hr>
+                <h2>Статус по аудиториям <a href='#'><span class="glyphicon glyphicon-refresh btnRefresh"></span></a></h2>
+                <table
+                  id="table-container"
+                  data-toggle="true"
+                  data-toolbar="#toolbar"
+                  data-search="false"
+                  data-show-columns="false"
+                  data-pagination="true"
+                  data-height="500">
+                </table>
             </div>
             <hr>
         </div>
@@ -139,6 +160,25 @@ target="blank">http://bradfrostweb.com/blog/post/float-label-pattern/</a></small
 <br>
 
 
+
+  <script type='text/javascript'>
+    $(window).load(function(){
+      var data = {{table_data|tojson}};
+      var columns = {{table_columns|tojson}};
+      $(function() {
+        $('#table-container').bootstrapTable({ 
+          data: data,
+          columns: columns,
+        });
+      });
+    });
+
+
+    $(".btnRefresh").click(function(event) {
+      location.reload();
+  })
+
+  </script>
 
   </body>
 </html>
