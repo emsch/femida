@@ -27,13 +27,13 @@ def augv1(shape, paug=.5):
     data_transform = transforms.Compose([
         transforms.RandomChoice([
             transforms.Compose([
-                transforms.Resize((int(h * 1.15), int(h * 1.15))),
+                transforms.Resize((int(h * 1.1), int(h * 1.1))),
                 transforms.RandomCrop(shape),
             ]),
             transforms.Resize(shape),
             transforms.Compose([
                 transforms.Resize((int(h * 1.1), int(h * 1.1))),
-                transforms.Pad((int(h * .05), int(h * .05)), padding_mode='reflect'),
+                transforms.Pad((int(h * .05), int(h * .05)), (211, 211, 211)),
                 transforms.RandomCrop(shape),
             ])
         ]),

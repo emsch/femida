@@ -235,34 +235,26 @@ class CroppedAnswers(object):
             recognized = recognized[910:-200]
         return recognized
 
+    PERSONAL_BOX = [slice(20, 1100), slice(45, 3000)]
+    ANSWERS_BOX = [slice(1150, -200), slice(45, 3000)]
+    MATH_CHECKBOX = [slice(780, 870), slice(490, 570)]
+    OT_CHECKBOX = [slice(780, 870), slice(1220, 1300)]
+
     @property
     def personal(self):
-        return self.cropped[20:910, 45:2120]
+        return self.cropped[self.PERSONAL_BOX]
 
     @property
     def answers(self):
-        return self.cropped[910:-200]
-
-    @property
-    def first_name(self):
-        return self.cropped[175:325, 400:2121]
-
-    @property
-    def last_name(self):
-        return self.cropped[30:185, 400:2121]
-
-    @property
-    def middle_name(self):
-        return self.cropped[320:470, 400:2121]
-
-    @property
-    def class_number(self):
-        return self.cropped[470:587, 400:2121]
+        return self.cropped[self.ANSWERS_BOX]
 
     @property
     def math_checkbox(self):
-        return self.cropped[620:770, 460:630]
+        return self.cropped[self.MATH_CHECKBOX]
 
     @property
     def ot_checkbox(self):
-        return self.cropped[620:770, 1200:1370]
+        return self.cropped[self.OT_CHECKBOX]
+
+    def is_ot(self):
+        return self.ot_checkbox.mean() > 225

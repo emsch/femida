@@ -12,15 +12,22 @@ def load_net(path, device='cpu'):
     return net
 
 
-def wrap(net):
-    device = next(net.parameters()).device
-
+def wrap(clf, size):
     def predict(cropped):
-        return (net(torch.from_numpy(
-            cropped.get_rectangles_array(net.input_size)
-        ).to(device)) < .5).cpu().numpy()
+        return clf(cropped.get_rectangles_array(size))
     return predict
 
 
-def load(path, device='cpu'):
-    return wrap(load_net(path, device))
+def wrapnet(net):
+    device = next(net.parameters()).device
+
+    def clf(imgs):
+        return (net(torch.from_numpy(imgs).to(device)) < .5).cpu().numpy()
+    return wrap(clf, net.input_size)
+
+
+def load(path: str, device='cpu'):
+    if path.endswith('t7'):
+        return wrapnet(load_net(path, device))
+    else:
+        raise NotImplementedError
