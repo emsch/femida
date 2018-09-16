@@ -31,7 +31,7 @@ from collections import Counter
 
 
 mod_export = Blueprint('export', __name__)
-from database import mongo
+from database import mongo  # noqa
 pdfs = mongo.db.pdfs
 answers = mongo.db.answers
 
@@ -53,7 +53,7 @@ class Question:
     def __init__(
             self, id_=None, option=None, banned_options="",
             yellow=None, red=None,
-        ):
+    ):
         self.id = id_
         self.banned_options = banned_options
         self.options = Counter([self.clean_option(option)])
@@ -77,7 +77,7 @@ class Question:
 
     def get_res_style(self):
         res = self.get_res()
-        counts = [i[1] for i in self.options.most_common()]
+        # ? counts = [i[1] for i in self.options.most_common()]
         if not self.has_contradicting_updates:
             # All good!
             if self.has_updates:
@@ -107,8 +107,8 @@ def export():
     bold = workbook.add_format({'bold': True})
 
     header = ["№", "status", "surname", "name", "patronumic", "class", "type",
-             "variant", "requested_manual", "manual_checks", "img_test_form",
-             "img_fio", "UUID"]
+              "variant", "requested_manual", "manual_checks", "img_test_form",
+              "img_fio", "UUID"]
     header.extend([str(i) for i in range(1, 41)])
     header.extend(["raw_json"])
     for i, v in enumerate(header):
@@ -160,6 +160,6 @@ def export():
     workbook.close()
     output.seek(0)
 
-    #finally return the file
+    # finally return the file
     attachment_filename='femida_%s.xlsx' % datetime.datetime.now().isoformat()[:19]
     return send_file(output, attachment_filename=attachment_filename, as_attachment=True)

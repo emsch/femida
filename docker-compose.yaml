@@ -40,6 +40,7 @@ services:
       - 443:443
     volumes:
       - media:/media/
+      - ./databases/:/app/databases/
       - ./ssl/:/etc/nginx/ssl/
 
   ocr_producer:

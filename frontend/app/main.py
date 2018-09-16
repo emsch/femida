@@ -4,6 +4,7 @@ import uuid
 import datetime
 import time
 import json
+import random
 
 from flask import (
     Flask, request,
@@ -20,7 +21,6 @@ from flask_login import (
     logout_user,
     current_user
 )
-from flask_pymongo import PyMongo
 
 from bson.objectid import ObjectId
 from werkzeug.utils import secure_filename
@@ -41,7 +41,7 @@ app.config["MONGO_URI"] = f"mongodb://{MONGO_HOST}:27017/femida"
 app.secret_key = os.environ['FEMIDA_SECRET_KEY']
 app.debug = os.environ.get('FEMIDA_DEBUG', False)
 
-from database import mongo
+from database import mongo  # noqa
 mongo.init_app(app)
 pdfs = mongo.db.pdfs
 answers = mongo.db.answers
@@ -54,6 +54,7 @@ login_manager.login_view = "login"
 
 # Минимальное число ручных проверок (перекрытие)
 MIN_NEEDED_CHECKS = os.environ.get('FEMIDA_HAND_CHECKS', 2)
+NAMES_DATABASE_PATH = 'databases/names.csv'
 
 
 # silly user model
@@ -245,6 +246,8 @@ def handle_pdf():
     filename = secure_filename(file.filename)
     flash(u'Filename=%s' % filename)
     flash(u'uid=%s' % uid)
+    pdf_comment = request.form['pdf_comment']
+    flash(u'pdf_comment=%s' % pdf_comment)
     path = os.path.join(app.config['UPLOAD_FOLDER'], uid+"__"+filename)
     file.save(path)
     flash(u'Загрузка файла успешно осуществлена!')
@@ -254,6 +257,7 @@ def handle_pdf():
         "UUID": uid,
         "path": path,
         "status": 'waiting for OCR',
+        "pdf_comment": pdf_comment,
         "date": datetime.datetime.utcnow(),
         "session_id": current_user.get_id()
     })
@@ -316,8 +320,7 @@ def load_user(userid):
 
 @stream_with_context
 def event_stream():
-    import random
-    for i in range(10):
+    for i in range(1):
         num = random.randint(0, 20)
         pdf_statuses = {r['_id']: r['count'] for r in pdfs.aggregate(
             [{"$group": {'_id': "$status", 'count': {'$sum': 1}}}])}
@@ -327,7 +330,7 @@ def event_stream():
             'pdf_statuses': pdf_statuses
         }
         yield 'data: %s\n\n' % json.dumps(message)
-        time.sleep(3)
+        time.sleep(1)
 
 
 @app.route("/manager_flow")
@@ -336,15 +339,86 @@ def manager_flow():
     return Response(event_stream(), mimetype="text/event-stream")
 
 
+COLUMNS = [
+      {
+        "field": "comment",  # which is the field's name of data key
+        "title": "Пачка",  # display as the table header's name
+        "sortable": True,
+      },
+      {
+        "field": "num_works",
+        "title": "Число работ",
+        "sortable": True,
+      },
+      {
+        "field": "num_checks",
+        "title": "Число проверок",
+        "sortable": True,
+      },
+      {
+        "field": "min_checks",
+        "title": "Минимум проверок",
+        "sortable": True,
+      },
+      {
+        "field": "max_checks",
+        "title": "Максимум проверок",
+        "sortable": True,
+      },
+      {
+        "field": "num_requested_manual_checks",
+        "title": "Запрошено ручных проверок",
+        "sortable": True,
+      },
+    ]
+
+
 @app.route('/monitor.html')
 @login_required
 def serve_monitor():
-    return render_template('monitor.html')
+    data = list(answers.aggregate([
+        {'$lookup': {
+            'from': 'pdfs', 'localField': 'UUID', 'foreignField': 'UUID', 'as': 'pdf_info'
+        }},
+        {'$unwind': '$pdf_info'},
+        {'$group': {
+            '_id': {'comment': '$pdf_info.pdf_comment'},
+            'num_works': {'$sum': 1},
+            'num_checks': {'$sum': {"$size": '$manual_checks'}},
+            'min_checks': {'$min': {"$size": '$manual_checks'}},
+            'max_checks': {'$max': {"$size": '$manual_checks'}},
+            'num_requested_manual_checks': {'$sum': {"$size": '$requested_manual'}},
+        }}
+    ]))
+    for row in data:
+        row['comment'] = row['_id']['comment']
+    print(data)
+    # other column settings -> http://bootstrap-table.wenzhixin.net.cn/documentation/#column-options
+    return render_template('monitor.html', table_data=data, table_columns=COLUMNS)
 
 
-from export import mod_export as export_module
+@app.route("/get_db.json")
+@login_required
+def get_db():
+    # Возвращает базу подсказок для формы
+    names = []
+    surnames = []
+    patronymics = []
+    with open(NAMES_DATABASE_PATH) as f:
+        for line in f:
+            surname, name, patronymic = line.strip().split(';')
+            names.append(name)
+            surnames.append(surname)
+            patronymics.append(patronymic)
+        names = list(set(names))
+        surnames = list(set(surnames))
+        patronymics = list(set(patronymics))
+        return jsonify(dict(names=names, surnames=surnames, patronymics=patronymics))
+
+
+from export import mod_export as export_module  # noqa
 app.register_blueprint(export_module)
 
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0')
+    app.run(host='0.0.0.0', processes=10)
