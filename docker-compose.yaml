@@ -83,6 +83,18 @@ services:
     depends_on:
       - pdf_consumer
 
+  status_updater:
+    build:
+      context: python
+    restart: always
+    env_file:
+    - envfile
+    volumes:
+    - detect:/var/femida_detect
+    command: run_status_updater --root=/var/femida_detect --host=mongodb
+    depends_on:
+    - answers_consumer
+
 volumes:
   data:
   media:

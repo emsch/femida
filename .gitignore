@@ -108,6 +108,7 @@ venv.bak/
 .DS_Store
 data/
 !python/tests/data/
+python/tests/out
 notebooks/
 Makefile
 exman/

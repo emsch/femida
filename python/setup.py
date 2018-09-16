@@ -39,6 +39,11 @@ if __name__ == '__main__':
         name='femida-detect',
         author='Brazhenko Dmitry, Maxim Kochurov',
         packages=find_packages(),
-        scripts=['bin/run_producer', 'bin/run_pdf_consumer', 'bin/run_answers_consumer'],
+        scripts=[
+            'bin/run_producer',
+            'bin/run_pdf_consumer',
+            'bin/run_answers_consumer',
+            'bin/run_status_updater'
+        ],
         **install_deps()
     )

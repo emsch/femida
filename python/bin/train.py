@@ -17,7 +17,7 @@ parser = exman.ExParser('Training for detection model', root=os.path.join(
 parser.add_argument('--paug', type=float, default=.5, help='Augmentation probability')
 parser.add_argument('--imgsize', type=int, default=28, help='Image (Size x Size)')
 parser.add_argument('--data_dir', type=pathlib.Path, help='Data directory', default='./data/')
-parser.add_argument('--epochs', '-e', type=int, default=30, help='Number of epoches')
+parser.add_argument('--epochs', '-e', type=int, default=30, help='Number of epochs')
 parser.add_argument('--lr', type=float, default=.001, help='Initial learning rate')
 parser.add_argument('--batch_size', type=int, default=64, help='Batch size')
 parser.add_argument('--log_every', type=int, default=10, help='Log frequency (batches)')
@@ -32,7 +32,7 @@ parser.add_argument('-a', type=str, default=1, help='Aug Version')
 parser.add_argument('--opt', type=str, choices=('adam', 'sgd'), help='Model Optimizer', default='adam')
 parser.add_argument('--wd', type=float, default=0.005, help='Weight decay')
 parser.add_argument('--seed', type=int, default=42, help='Random seed')
-parser.register_validator(lambda args: args.epoches >= 1)
+parser.register_validator(lambda args: args.epochs >= 1)
 parser.register_validator(lambda args: args.batch_size >= 1)
 
 
@@ -141,7 +141,7 @@ def main(*args, **kwargs):
                 print(LOG_TEMPLATE.format(
                     perc=i/len(train_loader),
                     e=e+1,
-                    total=args.epoches,
+                    total=args.epochs,
                     loss=ce.item(),
                     acc=((yh.view(-1) > .5).long() == y).float().mean().item()
                 ))
@@ -159,13 +159,13 @@ def main(*args, **kwargs):
         ret = dict(acc=correct/total, bce=loss/total, e=e)
         print(LOG_TEMPLATE_VAL.format(
             e=e+1,
-            total=args.epoches,
+            total=args.epochs,
             loss=ret['bce'],
             acc=ret['acc']
         ))
         return ret
     evals = {}
-    for epoch in range(args.epoches):
+    for epoch in range(args.epochs):
         train_once(epoch)
         evals = validate(epoch)
         if evals['acc'] > best_acc:

@@ -3,32 +3,29 @@ import numpy as np
 import json
 import functools
 import collections
-try:
-    from pyzbar import pyzbar
-except ImportError:
-    pyzbar = NotImplemented
 import itertools
 
 from .utils import listit
 
 
 BORDER_LEFT = np.array([
-    1001.05364189, 1140.30542526, 1279.14998283, 1419.51725082,
-    1559.92500267, 1703.37992821, 1962.73085518, 2108.28859329,
-    2253.78823833, 2398.27252483, 2543.75992908, 2687.42875385
+    198,  332,  461,  595,
+    727,  857,  989, 1117,
+    1252, 1384, 1516, 1651,
+    1783, 1914, 2047, 2176,
+    2309, 2442, 2573, 2706
 ])
-BORDER_RIGHT = BORDER_LEFT + 119.08159110083334
+BORDER_RIGHT = BORDER_LEFT + 84
 
 BORDER_TOP = np.array([
-    117.07986768,  262.0833257,   406.66667048,  551.08331553,
-    696.61630789,  841.62500191,  988.26667436,  1134.61490504,
-    1278.74997139, 1424.70830472, 1570.14406967, 1715.04166921,
-    1860.08333524, 2003.87500127, 2147.95829391, 2294.20823479,
-    2440.94248358, 2589.62494087, 2736.86812528, 2881.99990145
+    1322, 1453, 1583, 1715,
+    1848, 2092, 2224, 2353,
+    2484, 2613
 ])
-BORDER_BOTTOM = BORDER_TOP + 116.13320818099999
+BORDER_BOTTOM = BORDER_TOP + 83
 
-LABELS = ('A', 'B', 'C', 'D', 'E', 'F')
+
+LABELS = ('A', 'B', 'C', 'D', 'E')
 QUESTIONS = tuple(range(1, 41))
 WIDTH = 3000
 HEIGHT = int(WIDTH * 578 / 403)
@@ -51,13 +48,12 @@ def _get_small_rectangles_positions_middle():
     xr, yb = np.meshgrid(BORDER_RIGHT, BORDER_BOTTOM)
     xc, yc = (xl+xr)/2, (yt+yb)/2
     dx, dy = (xl-xr), (yb-yt)
-
     labels = LABELS
     result = []
     for i, j in itertools.product(range(xc.shape[0]), range(xc.shape[1])):
-        question = QUESTIONS[i + (len(QUESTIONS)//2) * (j // len(LABELS))]
-        label = labels[j % len(LABELS)]
-        box = (question, label), Box((yc[i, j], xc[i, j]), (dy[i, j], dx[i, j]), 0.)
+        question = QUESTIONS[j + (len(QUESTIONS)//2) * (i // len(LABELS))]
+        label = labels[i % len(LABELS)]
+        box = (question, label), Box((xc[i, j], yc[i, j]), (dx[i, j], dy[i, j]), 0.)
         result.append(box)
     return tuple(result)
 
@@ -101,15 +97,18 @@ def crop_image(image):
         box = np.int0(box)
 
         # no noise condition
-        if (rect[1][0] > 40) and (rect[1][1] > 40):
+        if (rect[1][0] > 80) and (rect[1][1] > 80):
             statistics = get_statistics(image, box)
             if np.mean(statistics) < 100:
                 allowed_boxes.append(rect)
 
-    nec_boxes = [min(allowed_boxes, key=lambda x: x[0][0] + x[0][1]),
-                 max(allowed_boxes, key=lambda x: x[0][0] + x[0][1]),
-                 min(allowed_boxes, key=lambda x: x[0][0] - x[0][1]),
-                 max(allowed_boxes, key=lambda x: x[0][0] - x[0][1])]
+    try:
+        nec_boxes = [min(allowed_boxes, key=lambda x: x[0][0] + x[0][1]),
+                     max(allowed_boxes, key=lambda x: x[0][0] + x[0][1]),
+                     min(allowed_boxes, key=lambda x: x[0][0] - x[0][1]),
+                     max(allowed_boxes, key=lambda x: x[0][0] - x[0][1])]
+    except ValueError as e:
+        raise cv2.error('No rectangles found') from e
 
     large = sorted(image.shape)[-1]
     small = sorted(image.shape)[-2]
@@ -156,8 +155,12 @@ def get_small_rectangles(image, xlim=(-np.inf, np.inf), ylim=(-np.inf, np.inf)):
 
 
 def validate_qr_code(image):
+    from pyzbar import pyzbar
     barcodes = pyzbar.decode(image)
-    return json.loads(barcodes[0].data.decode("utf-8"))
+    if barcodes:
+        return json.loads(barcodes[0].data.decode("utf-8"))
+    else:
+        return {}
 
 
 class CroppedAnswers(object):
@@ -209,6 +212,9 @@ class CroppedAnswers(object):
                 res.append(img[box_to_slice(box)])
         return (np.stack(res).transpose((0, 3, 1, 2))/255.).astype(np.float32)
 
+    def get_rectangles_with_labels(self):
+        return self.get_rectangles_array(), list(RECTANGLES_POSITIONS_MIDDLE.keys())
+
     @staticmethod
     def get_labels():
         return RECTANGLES_POSITIONS_MIDDLE.keys()
@@ -226,37 +232,26 @@ class CroppedAnswers(object):
                 box = np.int0(box)
                 cv2.drawContours(recognized, [box], -1, (0, 0, 255), 4)
         if only_answers:
-            recognized = recognized[910:-200]
+            recognized = recognized[self.ANSWERS_BOX]
         return recognized
+
+    PERSONAL_BOX = (slice(20, 1100), slice(45, 3000))
+    ANSWERS_BOX = (slice(1150, -200), slice(45, 3000))
+    MATH_CHECKBOX = (slice(780, 870), slice(490, 570))
+    OT_CHECKBOX = (slice(780, 870), slice(1220, 1300))
 
     @property
     def personal(self):
-        return self.cropped[20:910, 45:2120]
+        return self.cropped[self.PERSONAL_BOX]
 
     @property
     def answers(self):
-        return self.cropped[910:-200]
-
-    @property
-    def first_name(self):
-        return self.cropped[175:325, 400:2121]
-
-    @property
-    def last_name(self):
-        return self.cropped[30:185, 400:2121]
-
-    @property
-    def middle_name(self):
-        return self.cropped[320:470, 400:2121]
-
-    @property
-    def class_number(self):
-        return self.cropped[470:587, 400:2121]
+        return self.cropped[self.ANSWERS_BOX]
 
     @property
     def math_checkbox(self):
-        return self.cropped[620:770, 460:630]
+        return self.cropped[self.MATH_CHECKBOX]
 
     @property
     def ot_checkbox(self):
-        return self.cropped[620:770, 1200:1370]
+        return self.cropped[self.OT_CHECKBOX]

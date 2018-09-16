@@ -18,7 +18,7 @@ def test_model(size, v):
     assert out.shape == (10, 1)
 
 
-def test_real_data_predict(cropped_answers, model, jpg):
+def test_real_data_predict(cropped_answers, model, cropped):
     images = cropped_answers.get_rectangles_array(28)
     pred = model(torch.from_numpy(images)) < .5
     recognized = cropped_answers.cropped.copy()
@@ -29,4 +29,4 @@ def test_real_data_predict(cropped_answers, model, jpg):
             box = cv2.boxPoints(box)
             box = np.int0(box)
             cv2.drawContours(recognized, [box], -1, (0, 0, 255), 4)
-    pytest.helpers.save_image(recognized, 'test_real_data_predict', os.path.basename(jpg) + '.inferred.jpg')
+    pytest.helpers.save_image(recognized, 'test_real_data_predict', os.path.basename(cropped) + '.inferred.jpg')
