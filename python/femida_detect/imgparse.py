@@ -235,10 +235,10 @@ class CroppedAnswers(object):
             recognized = recognized[self.ANSWERS_BOX]
         return recognized
 
-    PERSONAL_BOX = [slice(20, 1100), slice(45, 3000)]
-    ANSWERS_BOX = [slice(1150, -200), slice(45, 3000)]
-    MATH_CHECKBOX = [slice(780, 870), slice(490, 570)]
-    OT_CHECKBOX = [slice(780, 870), slice(1220, 1300)]
+    PERSONAL_BOX = (slice(20, 1100), slice(45, 3000))
+    ANSWERS_BOX = (slice(1150, -200), slice(45, 3000))
+    MATH_CHECKBOX = (slice(780, 870), slice(490, 570))
+    OT_CHECKBOX = (slice(780, 870), slice(1220, 1300))
 
     @property
     def personal(self):

@@ -1,31 +1,14 @@
 #!/usr/bin/env python3
-import os
-import uuid
 import datetime
-import time
 import json
 import xlsxwriter
 from io import BytesIO
 
 from flask import (
-    Flask, request,
-    send_from_directory,
-    render_template,
-    redirect, url_for,
-    flash, Response,
-    Blueprint, jsonify,
-    stream_with_context,
+    Blueprint,
     send_file
 )
-from flask_login import (
-    LoginManager, UserMixin,
-    login_required, login_user,
-    logout_user,
-    current_user
-)
-from flask_pymongo import PyMongo
 
-from bson.objectid import ObjectId
 from bson import json_util
 from collections import Counter
 
@@ -153,13 +136,13 @@ def export():
                 col()
             worksheet.write(1+row, col(), json.dumps(r, default=json_util.default))    
 
-        except:
-            worksheet.write(1+row, 0, 'ERROR OCCURED.')
+        except Exception as e:
+            worksheet.write(1+row, 0, 'ERROR OCCURED: ' + str(e))
             raise
 
     workbook.close()
     output.seek(0)
 
     # finally return the file
-    attachment_filename='femida_%s.xlsx' % datetime.datetime.now().isoformat()[:19]
+    attachment_filename = 'femida_%s.xlsx' % datetime.datetime.now().isoformat()[:19]
     return send_file(output, attachment_filename=attachment_filename, as_attachment=True)
