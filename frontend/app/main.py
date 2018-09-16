@@ -21,7 +21,6 @@ from flask_login import (
     logout_user,
     current_user
 )
-from flask_pymongo import PyMongo
 
 from bson.objectid import ObjectId
 from werkzeug.utils import secure_filename
@@ -42,7 +41,7 @@ app.config["MONGO_URI"] = f"mongodb://{MONGO_HOST}:27017/femida"
 app.secret_key = os.environ['FEMIDA_SECRET_KEY']
 app.debug = os.environ.get('FEMIDA_DEBUG', False)
 
-from database import mongo
+from database import mongo  # noqa
 mongo.init_app(app)
 pdfs = mongo.db.pdfs
 answers = mongo.db.answers
@@ -55,7 +54,7 @@ login_manager.login_view = "login"
 
 # Минимальное число ручных проверок (перекрытие)
 MIN_NEEDED_CHECKS = os.environ.get('FEMIDA_HAND_CHECKS', 2)
-NAMES_DATABASE_PATH = 'databases/2018_names_db.csv'
+NAMES_DATABASE_PATH = 'databases/names.csv'
 
 
 # silly user model
@@ -342,8 +341,8 @@ def manager_flow():
 
 COLUMNS = [
       {
-        "field": "comment", # which is the field's name of data key
-        "title": "Пачка", # display as the table header's name
+        "field": "comment",  # which is the field's name of data key
+        "title": "Пачка",  # display as the table header's name
         "sortable": True,
       },
       {
@@ -373,21 +372,22 @@ COLUMNS = [
       },
     ]
 
+
 @app.route('/monitor.html')
 @login_required
 def serve_monitor():
     data = list(answers.aggregate([
         {'$lookup': {
-            'from':'pdfs', 'localField':'UUID', 'foreignField':'UUID', 'as':'pdf_info'
-        }}, 
-        {'$unwind':'$pdf_info'}, 
+            'from': 'pdfs', 'localField': 'UUID', 'foreignField': 'UUID', 'as': 'pdf_info'
+        }},
+        {'$unwind': '$pdf_info'},
         {'$group': {
-            '_id':{'comment':'$pdf_info.pdf_comment'}, 
-            'num_works': { '$sum': 1 }, 
-            'num_checks': {'$sum': {"$size":'$manual_checks'}}, 
-            'min_checks': {'$min': {"$size":'$manual_checks'}}, 
-            'max_checks': {'$max': {"$size":'$manual_checks'}}, 
-            'num_requested_manual_checks': {'$sum': {"$size":'$requested_manual'}},
+            '_id': {'comment': '$pdf_info.pdf_comment'},
+            'num_works': {'$sum': 1},
+            'num_checks': {'$sum': {"$size": '$manual_checks'}},
+            'min_checks': {'$min': {"$size": '$manual_checks'}},
+            'max_checks': {'$max': {"$size": '$manual_checks'}},
+            'num_requested_manual_checks': {'$sum': {"$size": '$requested_manual'}},
         }}
     ]))
     for row in data:
@@ -416,8 +416,7 @@ def get_db():
         return jsonify(dict(names=names, surnames=surnames, patronymics=patronymics))
 
 
-
-from export import mod_export as export_module
+from export import mod_export as export_module  # noqa
 app.register_blueprint(export_module)
 
 
