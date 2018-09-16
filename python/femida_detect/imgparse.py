@@ -232,7 +232,7 @@ class CroppedAnswers(object):
                 box = np.int0(box)
                 cv2.drawContours(recognized, [box], -1, (0, 0, 255), 4)
         if only_answers:
-            recognized = recognized[910:-200]
+            recognized = recognized[self.ANSWERS_BOX]
         return recognized
 
     PERSONAL_BOX = [slice(20, 1100), slice(45, 3000)]
@@ -255,6 +255,3 @@ class CroppedAnswers(object):
     @property
     def ot_checkbox(self):
         return self.cropped[self.OT_CHECKBOX]
-
-    def is_ot(self):
-        return self.ot_checkbox.mean() > 225
