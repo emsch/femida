@@ -36,6 +36,7 @@ def handle_error(task, error, args):
     task['errors'] += 1
     if task['errors'] > args.max_errors:
         task['result'] = dict(
+            page=task['i'],
             personal=[],
             UUID=task['UUID'],
             requested_manual=[],
@@ -95,6 +96,7 @@ def main(args):
                 'session_id': 'ocr', 'updates': {}, 'date': datetime.datetime.now()}
             ]
             result = dict(
+                page=task['i'],
                 personal=[],
                 UUID=task['UUID'],
                 requested_manual=[],

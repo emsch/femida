@@ -29,7 +29,7 @@ parser.add_argument('--debug', action='store_true')
 logger = logging.getLogger('consumer :: pdf')
 
 
-def finalize(t, out_queue):
+def finalize(t, out_queue, pdfs):
     for i, imagef in enumerate(t['result']):
         task_ = dict(
             UUID=t['UUID'],
@@ -41,6 +41,10 @@ def finalize(t, out_queue):
         )
         out_queue.put(task_)
     logger.info(f"Task _id={t['_id']} :: {len(t['result'])} images have been put in out queue")
+    pdfs.update_one(
+        {'_id': t['_id']},
+        {'$set': {'pages': len(t['result'])}}
+    )
 
 
 def handle_error(t, e, pdfs, queue, args):
@@ -86,7 +90,7 @@ def main(args):
         task = queue.get()
         try:
             if 'result' in task:
-                finalize(task, out_queue)
+                finalize(task, out_queue, pdfs)
                 continue
             logger.info(f"Got new task _id={task['_id']}")
             pdfs.update_one(
@@ -101,7 +105,7 @@ def main(args):
             logger.debug(f"Task _id={task['_id']} :: converted to {len(images)} images")
             task['result'] = images
             pdf_status[task['UUID']] = set()
-            finalize(task, out_queue)
+            finalize(task, out_queue, pdfs)
         except RuntimeError as e:
             handle_error(task, e, pdfs, queue, args)
             continue

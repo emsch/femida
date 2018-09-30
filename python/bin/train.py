@@ -178,7 +178,7 @@ def main(*args, **kwargs):
     state = model.state_dict()
     evals['model'] = state
     evals['meta'] = meta
-    torch.save(state, os.path.join(args.model_dir, 'model.t7'))
+    torch.save(evals, os.path.join(args.model_dir, 'model.t7'))
 
 
 if __name__ == '__main__':

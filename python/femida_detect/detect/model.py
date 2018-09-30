@@ -189,6 +189,7 @@ class Modelv4(nn.Module):
             nn.Linear(20+2, 1),
             nn.Sigmoid(),
         )
+        self.pool = nn.AdaptiveAvgPool2d(1)
         utils.initialize_weights(self)
 
     def forward(self, input):
@@ -202,10 +203,60 @@ class Modelv4(nn.Module):
         return x
 
 
+class Modelv5(nn.Module):
+    def __init__(self, input_dim=1, input_size=32, output_dim=1):
+        super().__init__()
+        self.input_dim = input_dim
+        self.output_dim = output_dim
+        self.input_size = input_size
+        self.c = c = [16, 32]
+        self.conv = nn.Sequential(
+            CoordConv2d(self.input_dim, c[0], 5, 1, 2, bias=False),
+            nn.ReLU(),
+            nn.AdaptiveAvgPool2d((3, 3)),
+            CoordConv2d(c[0], c[1], 3, 1, 1, bias=False),
+            nn.ReLU(),
+            nn.AdaptiveAvgPool2d((3, 3)),
+        )
+        self.fc0 = nn.Sequential(
+            nn.Linear(c[1]*9, 20),
+            nn.Tanh(),
+        )
+        self.fc1 = nn.Sequential(
+            nn.Linear(20+2, 1),
+            nn.Sigmoid(),
+        )
+        self.pool = nn.AdaptiveAvgPool2d(1)
+        utils.initialize_weights(self)
+
+    def prepare(self, input: torch.Tensor):
+        idx = torch.arange(input.size(-1) - 1, -1, -1, device=input.device)
+        input_t = input.transpose(-1, -2)
+        input_r = torch.index_select(input, -1, idx)
+        input_tr = torch.index_select(input_t, -1, idx)
+        input = torch.min(torch.min(input, input_t), torch.min(input_r, input_tr))
+        return input
+
+    def forward(self, input: torch.Tensor):
+        vi = input.contiguous().view(input.shape[0], -1)
+        input = self.prepare(input)
+        x = self.conv(input)
+        x = x.view(-1, self.c[-1] * 9)
+        x = self.fc0(x)
+        x = torch.cat([
+            x,
+            vi.mean(-1)[:, None],
+            vi.std(-1)[:, None]
+        ], -1)
+        x = self.fc1(x)
+        return x
+
+
 select = dict(
     v1=Modelv1,
     v2=Modelv2,
     v3=Modelv3,
     v4=Modelv4,
+    v5=Modelv5,
     ensemble=Ensemble
 )
