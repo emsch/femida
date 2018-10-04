@@ -19,6 +19,7 @@ services:
       - ME_CONFIG_SITE_BASEURL=/mongo
     env_file:
       - envfile
+      - secret
     ports:
       - 8081:8081
     depends_on:
