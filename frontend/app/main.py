@@ -52,8 +52,6 @@ login_manager.init_app(app)
 login_manager.login_view = "login"
 
 
-# Минимальное число ручных проверок (перекрытие)
-MIN_NEEDED_CHECKS = os.environ.get('FEMIDA_HAND_CHECKS', 2)
 NAMES_DATABASE_PATH = 'databases/names.csv'
 
 
@@ -72,6 +70,28 @@ class User(UserMixin):
 def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+def read_runtime_settings():
+    cursor = mongo.db.runtime_settings.find()
+    try:
+        settings = cursor.next()
+    except StopIteration:
+        mongo.db.runtime_settings.insert_one({
+            # Минимальное число ручных проверок (перекрытие)
+            'hand_checks': os.environ.get('FEMIDA_HAND_CHECKS', 2),
+            'hand_checks_gap': os.environ.get('FEMIDA_HAND_CHECKS_GAP', 10)
+        })
+        settings = read_runtime_settings()
+    return settings
+
+
+def update_runtime_settings(**kwargs):
+    id_ = read_runtime_settings()['_id']
+    mongo.db.runtime_settings.update_one(
+        {'_id': id_},
+        {'$push': kwargs},
+    )
 
 
 @app.route('/js/<path:path>')
@@ -104,14 +124,14 @@ def send_static(path):
 def serve_form():
     candidates = answers.find(
         {'$and': [
-            {'$where': 'this.manual_checks.length <= %s' % MIN_NEEDED_CHECKS},
+            {'$where': 'this.manual_checks.length <= %s' % read_runtime_settings()['hand_checks']},
             {'manual_checks': {'$ne': current_user.get_id()}},
             {'status': 'normal'},
             {'$where': 'this.requested_manual.length == 0'},
         ]}
     )
     num_candidates = candidates.count()
-    K = 10
+    K = read_runtime_settings()['hand_checks_gap']
     HK = (hash(current_user.get_id()) ^ num_candidates) % K
     last = None
     for candidate in candidates:
