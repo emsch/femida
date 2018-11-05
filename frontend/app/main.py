@@ -194,6 +194,7 @@ def process_updates(form, date, session_id):
         q = form.get('fix_q_'+str(i), None)
         ans = form.get('fix_ans_'+str(i), None)
         if q and q.isdigit() and ans and ans != '-':
+            q = q.lstrip('0')
             updates[q] = ans
     test_updates = {
         'updates': updates,
