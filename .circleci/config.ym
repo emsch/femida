@@ -1,0 +1,9 @@
+test:  
+  override:
+    - "true"
+    
+deployment:
+  production:
+    branch: master
+    commands:
+      - ssh circleci@femida.emsch.ru "cd /femida && git pull && docker-compose up --build -d"
