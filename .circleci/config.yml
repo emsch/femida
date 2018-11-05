@@ -1,6 +1,8 @@
 version: 2
 jobs:
   build:
+    docker: # use the docker executor type; machine and macos executors are also supported
+      - image: circleci/node:4.8.2 # the primary container, where your job's commands are run
     steps:
       # `deploy` step: identical to a `run` step, but uses only one container:
       # https://circleci.com/docs/2.0/configuration-reference/#deploy 
