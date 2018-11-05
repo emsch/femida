@@ -175,16 +175,16 @@ target="blank">http://bradfrostweb.com/blog/post/float-label-pattern/</a></small
             <p> Осталось {{ params.num_candidates }} ручных проверок (без учета перекрытия).
         </div>
         <div class="row">
+                <div class="col-sm-4 pull-right">
+                    <button type="submit" class="btn btn-success btn-xlarge pull-right" style="font-size: 36px" name="status" value="ok">
+                        <i class="icon-columns"></i>  Отправить
+                    </button>
+                </div>
                 <div class="col-sm-4">
                 </div>
                 <div class="col-sm-4">
                     <button type="submit" class="btn btn-danger btn-xlarge" style="font-size: 36px" name="status" value="manual" data-disable="false">
                         <i class="icon-columns"></i>  Ручная проверка
-                    </button>
-                </div>
-                <div class="col-sm-4">
-                    <button type="submit" class="btn btn-success btn-xlarge" style="font-size: 36px" name="status" value="ok">
-                        <i class="icon-columns"></i>  Отправить
                     </button>
                 </div>
         </div>
