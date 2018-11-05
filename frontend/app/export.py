@@ -138,7 +138,6 @@ def export():
 
         except Exception as e:
             worksheet.write(1+row, 0, 'ERROR OCCURED: ' + str(e))
-            raise
 
     workbook.close()
     output.seek(0)
