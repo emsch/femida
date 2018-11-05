@@ -139,27 +139,32 @@ def serve_form():
         RK = (hash(candidate['_id']) ^ num_candidates) % K
         if RK == HK:
             break
+    
     candidate = last
     if candidate is None:
         return render_template('form.html', no_more_candidates=True)
+    
+    # Prepare updates that we already submitted by others
     if len(candidate['test_updates']) > 0:
         updates = list(candidate['test_updates'][-1]['updates'].items())
-    # if len(candidate['test_results']['updates']) > 0:
-    #     updates = candidate['test_results']['updates'][-1].items()
-    #     updates = filter(lambda row: row[0].isdigit(), updates)
     else:
         updates = []
     updates += [['', '']] * 12
     updates = [[i+1, str(v), str(o)] for i, (v, o) in enumerate(updates)]
-
+    
+    # Prepare fio suggest
+    if len(candidate['personal']) > 0:
+        personal = candidate['personal'][-1]
+    else:
+        personal = dict()
+    
     params = {
         "img_fio": candidate['img_fio'],
         "img_test_form": candidate['img_test_form'],
         "id": candidate['_id'],
         "updates": updates,
-        'num_candidates': num_candidates
-        # "class": 'None', "name": 'None', "surname": 'None',
-        # "patronymic": 'None', "variant": 'None'
+        'num_candidates': num_candidates,
+        **personal,
     }
     return render_template('form.html', params=params, no_more_candidates=False)
 
