@@ -5,15 +5,13 @@ jobs:
       - image: circleci/node:4.8.2 # the primary container, where your job's commands are run
     steps:
       - add_ssh_keys:
-          fingerprints:
-            - "4f:02:97:d8:bd:f4:9d:db:ec:92:5e:8b:70:59:0e:aa"
       # `deploy` step: identical to a `run` step, but uses only one container:
       # https://circleci.com/docs/2.0/configuration-reference/#deploy 
       - deploy:
           name: deploy to femida
           command: |
             if [ "${CIRCLE_BRANCH}" = "master" ]; then
-              ssh circleci@femida.emsch.ru "cd /femida && git pull && docker-compose up --build -d"
+              ssh -o StrictHostKeyChecking=no circleci@femida.emsch.ru "cd /femida && git pull && docker-compose up --build -d"
             else
               echo "Not master branch, dry run only"
             fi
