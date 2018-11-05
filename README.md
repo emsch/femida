@@ -8,7 +8,7 @@
 ```
 git clone https://github.com/emsch/femida.git --recursive
 ```
-You need to have permissions to femida-private to obtain models and envfiles. If you don't have such access:
+You need to have permissions to `femida-private` to obtain models and envfiles. If you don't have such access:
 
   1. run the following (in the project root)
   ```
