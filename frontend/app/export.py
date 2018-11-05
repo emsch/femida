@@ -39,7 +39,10 @@ class Question:
     ):
         self.id = id_
         self.banned_options = banned_options
-        self.options = Counter([self.clean_option(option)])
+        if option is None:
+            self.options = Counter()
+        else:
+            self.options = Counter([self.clean_option(option)])
         self.has_updates = False
         self.has_contradicting_updates = False
         self.updates = []
@@ -56,7 +59,8 @@ class Question:
             self.has_contradicting_updates = True
         self.updates.append(option)
         self.options.update([self.clean_option(option)])
-        self.has_updates = True
+        if len(options) > 1:
+            self.has_updates = True
 
     def get_res_style(self):
         res = self.get_res()
@@ -72,7 +76,9 @@ class Question:
             return res, self.red
 
     def get_res(self):
-        if len(self.updates) > 0:
+        if len(self.options) == 0:
+            return None
+        elif len(self.updates) > 0:
             return self.updates[-1]
         else:
             return self.options.most_common(1)[0][0]
@@ -103,13 +109,11 @@ def export():
             worksheet.write(1+row, col(), 1+row)
             worksheet.write(1+row, col(), r.get('status', ""))
             # ФИО
-            personal = r['personal'][0] if len(r['personal']) > 0 else {}
-            worksheet.write(1+row, col(), personal.get('surname', ""))
-            worksheet.write(1+row, col(), personal.get('name', ""))
-            worksheet.write(1+row, col(), personal.get('patronymic', ""))
-            worksheet.write(1+row, col(), personal.get('class', ""))
-            worksheet.write(1+row, col(), personal.get('type', ""))
-            worksheet.write(1+row, col(), personal.get('variant', ""))
+            for field in ['surname', 'name', 'patronymic', 'class', 'type', 'variant']:
+                question = Question(field, yellow=yellow, red=red)
+                for personal in r['personal']:
+                    question.update(personal.get(field, ""))
+                worksheet.write(1+row, col(), *question.get_res_style())
             # cnt
             requested_manual = len(r.get('requested_manual', []))
             if requested_manual > 0:
@@ -117,14 +121,14 @@ def export():
             else:
                 worksheet.write(1+row, col(), requested_manual)
             manual_checks = len(r.get('manual_checks', []))
-            worksheet.write(1+row, col(), manual_checks)        
+            worksheet.write(1+row, col(), manual_checks)
             # IMGS
             worksheet.write(1+row, col(), 'http://femida.emsch.ru' + r.get('img_test_form', ""))
             worksheet.write(1+row, col(), 'http://femida.emsch.ru' + r.get('img_fio', ""))
             worksheet.write(1+row, col(), r.get('UUID', ""))
             # answers
             start = col.current()
-            for q in range(1,41):
+            for q in range(1, 41):
                 question = Question(
                     q, r.get('test_results', {}).get(str(q), ""), "F",
                     yellow, red
@@ -134,7 +138,7 @@ def export():
                         question.update(update['updates'][str(q)])
                 worksheet.write(1+row, start+q-1, *question.get_res_style())
                 col()
-            worksheet.write(1+row, col(), json.dumps(r, default=json_util.default))    
+            worksheet.write(1+row, col(), json.dumps(r, default=json_util.default))
 
         except Exception as e:
             worksheet.write(1+row, 0, 'ERROR OCCURED: ' + str(e))
