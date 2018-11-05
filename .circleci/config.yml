@@ -10,7 +10,7 @@ jobs:
           name: deploy to femida
           command: |
             if [ "${CIRCLE_BRANCH}" = "master" ]; then
-              ssh -o StrictHostKeyChecking=no circleci@femida.emsch.ru "cd /femida && git pull && docker-compose up --build -d"
+              ssh -o StrictHostKeyChecking=no circleci@femida.emsch.ru "cd /femida && git pull && sudo docker-compose up --build -d"
             else
               echo "Not master branch, dry run only"
             fi
