@@ -139,11 +139,11 @@ def serve_form():
         RK = (hash(candidate['_id']) ^ num_candidates) % K
         if RK == HK:
             break
-    
+
     candidate = last
     if candidate is None:
         return render_template('form.html', no_more_candidates=True)
-    
+
     # Prepare updates that we already submitted by others
     if len(candidate['test_updates']) > 0:
         updates = list(candidate['test_updates'][-1]['updates'].items())
