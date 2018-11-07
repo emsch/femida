@@ -22,6 +22,7 @@ from flask_login import (
     current_user
 )
 
+import bson
 from bson.objectid import ObjectId
 from werkzeug.utils import secure_filename
 
@@ -122,14 +123,26 @@ def send_static(path):
 @app.route('/form.html')
 @login_required
 def serve_form():
-    candidates = answers.find(
-        {'$and': [
-            {'$where': 'this.manual_checks.length <= %s' % read_runtime_settings()['hand_checks']},
-            {'manual_checks': {'$ne': current_user.get_id()}},
-            {'status': 'normal'},
-            {'$where': 'this.requested_manual.length == 0'},
-        ]}
-    )
+    candidate_id = request.args.get('id', None)
+    if candidate_id is None:
+        candidates = answers.find(
+            {'$and': [
+                {'$where': 'this.manual_checks.length <= %s' % read_runtime_settings()['hand_checks']},
+                {'manual_checks': {'$ne': current_user.get_id()}},
+                {'status': 'normal'},
+                {'$where': 'this.requested_manual.length == 0'},
+            ]}
+        )
+    else:
+        flash('Pulling by id=%s' % candidate_id)
+        try:
+            candidates = answers.find(
+                {'_id': ObjectId(candidate_id)},
+            )
+        except bson.errors.InvalidId as e:
+            flash(str(e))
+            return render_template('form.html', no_more_candidates=True)
+
     num_candidates = candidates.count()
     K = read_runtime_settings()['hand_checks_gap']
     HK = (hash(current_user.get_id()) ^ num_candidates) % K
