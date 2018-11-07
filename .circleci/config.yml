@@ -9,6 +9,9 @@ jobs:
           name: Start container and verify it's working
           command: |
             set -x
+            cat Makefile.template > Makefile
+            cat envfile.template > envfile
+            cat secret.template > secret
             docker-compose up -d
             # TODO test (curl) result
       # `deploy` step: identical to a `run` step, but uses only one container:
