@@ -153,7 +153,7 @@ def serve_form():
     updates = [[i+1, str(v), str(o)] for i, (v, o) in enumerate(updates)]
     
     # Prepare fio suggest
-    if len(candidate['personal']) > 0:
+    if len(candidate.get('personal', [])) > 0:
         personal = candidate['personal'][-1]
     else:
         personal = dict()
