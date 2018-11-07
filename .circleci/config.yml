@@ -4,6 +4,17 @@ jobs:
     docker: # use the docker executor type; machine and macos executors are also supported
       - image: circleci/node:4.8.2 # the primary container, where your job's commands are run
     steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Start container and verify it's working
+          command: |
+            set -x
+            cat Makefile.template > Makefile
+            cat envfile.template > envfile
+            cat secret.template > secret
+            docker-compose up -d
+            # TODO test (curl) result
       # `deploy` step: identical to a `run` step, but uses only one container:
       # https://circleci.com/docs/2.0/configuration-reference/#deploy 
       - deploy:
