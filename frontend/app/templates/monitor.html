@@ -153,6 +153,23 @@ target="blank">http://bradfrostweb.com/blog/post/float-label-pattern/</a></small
             </div>
             <hr>
         </div>
+        <hr />
+        <div class="row">
+            <div class="col-sm-12">
+                <h2>Редактор ФИО зарегистрировавшихся</h2>
+                <p>ФИО зарегистрировавшихся школьников используются как подсказки для ввода данных формы. Внесите ФИО ниже. <b>Разделитель:</b> <code>;</code>. Не забудьте <b>уникализировать и стандартизировать</b> имена, чтобы в качестве предложения не вылезали имена не на кириллице, КАПС, и другие. Можно использовать сервис <a href='https://dadata.ru'>dadata.ru</a>.
+
+                <form method="post">
+                  <div class="form-group">
+                    <label for="fio_field">ФИО зарегистрированных школьников</label>
+                    <textarea class="form-control" id="fio_field" name="fio_field" rows="6">{{ fios | safe }}</textarea>
+                  </div>
+                  <input type="submit" class="btn btn-success btn-send" value="Сохранить">
+
+                </form>
+
+            </div>
+        </div>
     </div>
 </div>
 
