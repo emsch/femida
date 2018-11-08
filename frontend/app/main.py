@@ -5,6 +5,7 @@ import datetime
 import time
 import json
 import random
+import errno
 
 from flask import (
     Flask, request,
@@ -22,6 +23,7 @@ from flask_login import (
     current_user
 )
 
+import bson
 from bson.objectid import ObjectId
 from werkzeug.utils import secure_filename
 
@@ -30,7 +32,6 @@ UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER', '/media/pdf_uploads/')
 RESULTS_FOLDER = os.environ.get('RESULTS_FOLDER', '/media/ocr_results/')
 MONGO_HOST = os.environ.get('MONGO_HOST', 'localhost')
 ALLOWED_EXTENSIONS = {'pdf'}
-
 
 # set the project root directory as the static folder, you can set others.
 app = Flask(__name__, static_url_path='')
@@ -122,14 +123,26 @@ def send_static(path):
 @app.route('/form.html')
 @login_required
 def serve_form():
-    candidates = answers.find(
-        {'$and': [
-            {'$where': 'this.manual_checks.length <= %s' % read_runtime_settings()['hand_checks']},
-            {'manual_checks': {'$ne': current_user.get_id()}},
-            {'status': 'normal'},
-            {'$where': 'this.requested_manual.length == 0'},
-        ]}
-    )
+    candidate_id = request.args.get('id', None)
+    if candidate_id is None:
+        candidates = answers.find(
+            {'$and': [
+                {'$where': 'this.manual_checks.length <= %s' % read_runtime_settings()['hand_checks']},
+                {'manual_checks': {'$ne': current_user.get_id()}},
+                {'status': 'normal'},
+                {'$where': 'this.requested_manual.length == 0'},
+            ]}
+        )
+    else:
+        flash('Pulling by id=%s' % candidate_id)
+        try:
+            candidates = answers.find(
+                {'_id': ObjectId(candidate_id)},
+            )
+        except bson.errors.InvalidId as e:
+            flash(str(e))
+            return render_template('form.html', no_more_candidates=True)
+
     num_candidates = candidates.count()
     K = read_runtime_settings()['hand_checks_gap']
     HK = (hash(current_user.get_id()) ^ num_candidates) % K
@@ -199,6 +212,7 @@ def process_updates(form, date, session_id):
         q = form.get('fix_q_'+str(i), None)
         ans = form.get('fix_ans_'+str(i), None)
         if q and q.isdigit() and ans and ans != '-':
+            q = q.lstrip('0')
             updates[q] = ans
     test_updates = {
         'updates': updates,
@@ -398,28 +412,43 @@ COLUMNS = [
     ]
 
 
-@app.route('/monitor.html')
+@app.route('/monitor.html', methods=["GET", "POST"])
 @login_required
 def serve_monitor():
-    data = list(answers.aggregate([
-        {'$lookup': {
-            'from': 'pdfs', 'localField': 'UUID', 'foreignField': 'UUID', 'as': 'pdf_info'
-        }},
-        {'$unwind': '$pdf_info'},
-        {'$group': {
-            '_id': {'comment': '$pdf_info.pdf_comment'},
-            'num_works': {'$sum': 1},
-            'num_checks': {'$sum': {"$size": '$manual_checks'}},
-            'min_checks': {'$min': {"$size": '$manual_checks'}},
-            'max_checks': {'$max': {"$size": '$manual_checks'}},
-            'num_requested_manual_checks': {'$sum': {"$size": '$requested_manual'}},
-        }}
-    ]))
-    for row in data:
-        row['comment'] = row['_id']['comment']
-    print(data)
-    # other column settings -> http://bootstrap-table.wenzhixin.net.cn/documentation/#column-options
-    return render_template('monitor.html', table_data=data, table_columns=COLUMNS)
+    if request.method == 'POST':
+        form = dict(request.form.items())
+        print(form)
+
+        os.makedirs(os.path.dirname(NAMES_DATABASE_PATH), exist_ok=True)
+        with open(NAMES_DATABASE_PATH, 'w') as f:
+            f.write(form.get('fio_field', ''))
+        return redirect(url_for('serve_monitor'))
+
+    else:
+        data = list(answers.aggregate([
+            {'$lookup': {
+                'from': 'pdfs', 'localField': 'UUID', 'foreignField': 'UUID', 'as': 'pdf_info'
+            }},
+            {'$unwind': '$pdf_info'},
+            {'$group': {
+                '_id': {'comment': '$pdf_info.pdf_comment'},
+                'num_works': {'$sum': 1},
+                'num_checks': {'$sum': {"$size": '$manual_checks'}},
+                'min_checks': {'$min': {"$size": '$manual_checks'}},
+                'max_checks': {'$max': {"$size": '$manual_checks'}},
+                'num_requested_manual_checks': {'$sum': {"$size": '$requested_manual'}},
+            }}
+        ]))
+        for row in data:
+            row['comment'] = row['_id']['comment']
+        print(data)
+        # other column settings -> http://bootstrap-table.wenzhixin.net.cn/documentation/#column-options
+        try:
+            fios = open(NAMES_DATABASE_PATH).read()
+        except IOError:
+            fios = ''
+
+        return render_template('monitor.html', table_data=data, table_columns=COLUMNS, fios=fios)
 
 
 @app.route("/get_db.json")
