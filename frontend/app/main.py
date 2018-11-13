@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 import os
 import uuid
 import datetime
@@ -53,9 +53,6 @@ login_manager.init_app(app)
 login_manager.login_view = "login"
 
 
-NAMES_DATABASE_PATH = 'databases/names.csv'
-
-
 # silly user model
 class User(UserMixin):
 
@@ -81,7 +78,8 @@ def read_runtime_settings():
         mongo.db.runtime_settings.insert_one({
             # Минимальное число ручных проверок (перекрытие)
             'hand_checks': os.environ.get('FEMIDA_HAND_CHECKS', 2),
-            'hand_checks_gap': os.environ.get('FEMIDA_HAND_CHECKS_GAP', 10)
+            'hand_checks_gap': os.environ.get('FEMIDA_HAND_CHECKS_GAP', 10),
+            'names_database': '',
         })
         settings = read_runtime_settings()
     return settings
@@ -91,7 +89,7 @@ def update_runtime_settings(**kwargs):
     id_ = read_runtime_settings()['_id']
     mongo.db.runtime_settings.update_one(
         {'_id': id_},
-        {'$push': kwargs},
+        {'$set': kwargs},
     )
 
 
@@ -121,6 +119,8 @@ def send_static(path):
 
 
 @app.route('/form.html')
+@app.route('/index.html')
+@app.route('/')
 @login_required
 def serve_form():
     candidate_id = request.args.get('id', None)
@@ -412,11 +412,7 @@ COLUMNS = [
 def serve_monitor():
     if request.method == 'POST':
         form = dict(request.form.items())
-        print(form)
-
-        os.makedirs(os.path.dirname(NAMES_DATABASE_PATH), exist_ok=True)
-        with open(NAMES_DATABASE_PATH, 'w') as f:
-            f.write(form.get('fio_field', ''))
+        update_runtime_settings(names_database=form.get('fio_field', ''))
         return redirect(url_for('serve_monitor'))
 
     else:
@@ -438,11 +434,7 @@ def serve_monitor():
             row['comment'] = row['_id']['comment']
         print(data)
         # other column settings -> http://bootstrap-table.wenzhixin.net.cn/documentation/#column-options
-        try:
-            fios = open(NAMES_DATABASE_PATH).read()
-        except IOError:
-            fios = ''
-
+        fios = read_runtime_settings().get('names_database', "")
         return render_template('monitor.html', table_data=data, table_columns=COLUMNS, fios=fios)
 
 
@@ -453,16 +445,16 @@ def get_db():
     names = []
     surnames = []
     patronymics = []
-    with open(NAMES_DATABASE_PATH) as f:
-        for line in f:
-            surname, name, patronymic = line.strip().split(';')
-            names.append(name)
-            surnames.append(surname)
-            patronymics.append(patronymic)
-        names = list(set(names))
-        surnames = list(set(surnames))
-        patronymics = list(set(patronymics))
-        return jsonify(dict(names=names, surnames=surnames, patronymics=patronymics))
+    fios = read_runtime_settings().get('names_database', "")
+    for line in fios.split('\n'):
+        surname, name, patronymic = line.strip().split(';')
+        names.append(name)
+        surnames.append(surname)
+        patronymics.append(patronymic)
+    names = list(set(names))
+    surnames = list(set(surnames))
+    patronymics = list(set(patronymics))
+    return jsonify(dict(names=names, surnames=surnames, patronymics=patronymics))
 
 
 from export import mod_export as export_module  # noqa
