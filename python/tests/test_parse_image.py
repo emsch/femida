@@ -24,4 +24,3 @@ def test_flipping(jpg):
     assert need_flip(cropped[::-1, ::-1])
     cropped_answers = CroppedAnswers(cropped[::-1, ::-1])
     assert not need_flip(cropped_answers.cropped)
-    assert 0
