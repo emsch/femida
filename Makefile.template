@@ -1,5 +1,5 @@
-REMOTE_SERVER: 'remote-server'
-REMOTE_PATH: '~/personal/femida'
+REMOTE_SERVER = 'remote-server'
+REMOTE_PATH = '~/personal/femida'
 
 .PHONY: sync
 sync:
