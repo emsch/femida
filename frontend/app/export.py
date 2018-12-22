@@ -59,7 +59,7 @@ class Question:
             self.has_contradicting_updates = True
         self.updates.append(option)
         self.options.update([self.clean_option(option)])
-        if len(options) > 1:
+        if len(self.options) > 1:
             self.has_updates = True
 
     def get_res_style(self):
