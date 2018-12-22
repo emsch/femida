@@ -43,7 +43,8 @@ def handle_error(task, error, args):
             manual_checks=[],
             test_results=[],
             test_updates=[],
-            status='error'
+            status='error',
+            flipped=False
         )
     else:
         logger.debug(f"Task _id={task['_id']} :: retry {task['errors']}/{args.max_errors}")
@@ -106,6 +107,7 @@ def main(args):
             )
             logger.debug(f"Task _id={task['_id']} :: {task['i']} :: CroppedAnswers.from_raw")
             cropped = femida_detect.imgparse.CroppedAnswers.from_raw(image)
+            result['flipped'] = cropped.flipped
             img_fio = os.path.join(args.save_path, f"{task['UUID']}__{task['i']}_fio.jpg")
             orig = cropped.personal
             h, w, _ = orig.shape
