@@ -186,10 +186,10 @@ def serve_pdf():
 def valid_form(form):
     class_ = form['class']
     variant = form['variant']
-    if class_ and not class_.isdigit():
+    if class_ and not (class_.isdigit() or class_ == "-"):
         flash(u'''ОШИБКА: некорректный класс. Должно быть число''')
         return False
-    if variant and not variant.isdigit():
+    if variant and not (variant.isdigit() or variant == '-'):
         flash(u'''ОШИБКА: некорректный вариант. Должно быть число''')
         return False
     for i in range(1, 20):
