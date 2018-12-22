@@ -105,7 +105,7 @@ target="blank">http://bradfrostweb.com/blog/post/float-label-pattern/</a></small
                 </div>
                 <div class="form-group float-label-control">
                     <label for="">Класс</label>
-                    <input name='class' type="number" class="form-control" placeholder="Класс" value='{{ params.class }}' min=8 max=11 required>
+                    <input name='class' type="form-control" class="form-control" placeholder="Класс" value="{{ params.class }}" pattern="[89]|10|11|-" required>
                 </div>
                 <hr>
                 <label class="form-check-input h4">
@@ -119,7 +119,7 @@ target="blank">http://bradfrostweb.com/blog/post/float-label-pattern/</a></small
                 </label>
                 <div class="form-group float-label-control">
                     <label for="">Вариант</label>
-                    <input name='variant' type="number" class="form-control" placeholder="Вариант" value='{{ params.variant }}' min=100 max=99999 required>
+                    <input name='variant' type="form-control" class="form-control" placeholder="Вариант" value="{{ params.variant }}" pattern="\d{3,5}|-" required>
                 </div>
                 <hr>
             </div>
