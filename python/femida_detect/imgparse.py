@@ -183,6 +183,9 @@ class CroppedAnswers(object):
     def __init__(self, cropped, validate_qr=False):
         if need_flip(cropped):
             cropped = cropped[::-1, ::-1]
+            self.flipped = True
+        else:
+            self.flipped = False
         if validate_qr:
             validate_qr_code(cropped)
         self.cropped = cropped
