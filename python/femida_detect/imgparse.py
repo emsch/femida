@@ -113,7 +113,8 @@ def crop_image(image):
         box = np.int0(box)
 
         # no noise condition
-        if (rect[1][0] > 80) and (rect[1][1] > 80):
+        SUPERPARAM = 60 #TODO KILL feriat
+        if (rect[1][0] > SUPERPARAM) and (rect[1][1] > SUPERPARAM):
             statistics = get_statistics(image, box)
             if np.mean(statistics) < 100:
                 allowed_boxes.append(rect)
