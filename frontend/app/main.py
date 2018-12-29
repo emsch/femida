@@ -232,11 +232,12 @@ def handle_data():
         "class": form['class'], "name": form['name'],
         "surname": form['surname'], "patronymic": form['patronymic'],
         "variant": form['variant'],
-        "type": form['type'],
+        "type": form.get('type', ''),
         'session_id': session_id, "date": date,
     }
     if form['status'] == 'manual':
-        requested_manual = {'session_id': session_id, "date": date}
+        requested_manual = {'session_id': session_id, "date": date, 
+                            'comment': form.get('message-text', "")}
     else:
         requested_manual = None
     test_updates = process_updates(form, date, session_id)
