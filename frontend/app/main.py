@@ -23,9 +23,7 @@ from flask_login import (
     logout_user,
     current_user
 )
-
 from flask_oauthlib.client import OAuth
-
 import bson
 from bson.objectid import ObjectId
 from werkzeug.utils import secure_filename
@@ -82,11 +80,12 @@ google = oauth.remote_app(
 class User(UserMixin):
 
     def __init__(self, id, email=None, picture=None):
-        self.id = id
-        self.name = "user" + str(id)
+        self.id = email
+        self.name = email
         self.password = self.name + "_secret"
         self.email = email
         self.picture = picture
+        self.session_id = id #this will be deprecated
 
     def __repr__(self):
         return "%d/%s/%s" % (self.id, self.name, self.password)
@@ -474,20 +473,19 @@ def get_db():
 from export import mod_export as export_module  # noqa
 app.register_blueprint(export_module)
 
-@app.route('/token')
+#@app.route('/token')
 @google.tokengetter
 def get_google_oauth_token():
     return session.get('google_token')
-
 
 @app.route('/userinfo')
 @fresh_login_required
 def get_auth_info():
     me = google.get('userinfo')
     resp = google.authorized_response()
-    return jsonify({"data": me.data, "session": str(session), "resp": resp, "is_fresh": session['_fresh'],
-                    "key": os.environ['GOOGLE_SECRET']})
+    return jsonify({"data": me.data, "session": str(session), "resp": resp, "is_fresh": session['_fresh']})
 
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', processes=10)
+

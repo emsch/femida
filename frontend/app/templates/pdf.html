@@ -46,7 +46,7 @@ target="blank">http://bradfrostweb.com/blog/post/float-label-pattern/</a></small
             либо лично Дмитрию Браженко, Максиму Кочурову или Андрею Петрину.
         </div>
         {% if current_user.is_authenticated %}
-            <p>Hi {{ current_user.email }}!
+            <p>Hi {{ current_user.name }}!
         {% endif %}
         {% with messages = get_flashed_messages() %}
           {% if messages %}
