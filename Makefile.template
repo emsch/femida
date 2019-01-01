@@ -37,3 +37,9 @@ configure:
 .PHONY: tests
 tests:
 	py.test
+
+.PHONY: deploy
+deploy:
+	make sync
+	ssh ${REMOTE_SERVER} "cd ${REMOTE_PATH}  && docker container stop \$$(docker container ls -a -q)";
+	ssh ${REMOTE_SERVER} "cd ${REMOTE_PATH}  && docker-compose up --build";
