@@ -23,17 +23,19 @@ google = oauth.remote_app(
     authorize_url='https://accounts.google.com/o/oauth2/auth',
 )
 
+#google.authorize(callback=url_for('authorized', _external=True))
 
 @app.route('/')
 def index():
     if 'google_token' in session:
         me = google.get('userinfo')
-        return jsonify({"data": me.data})
+        return jsonify({"info was received": {"data": me.data, "session": str(session)}})
     return redirect(url_for('login'))
 
 
 @app.route('/login')
 def login():
+    session.pop('google_token', None)
     return google.authorize(callback=url_for('authorized', _external=True))
 
 
@@ -56,6 +58,7 @@ def authorized():
     return jsonify({"data": me.data})
 
 
+@app.route('/token')
 @google.tokengetter
 def get_google_oauth_token():
     return session.get('google_token')
@@ -63,3 +66,7 @@ def get_google_oauth_token():
 
 if __name__ == '__main__':
     app.run()
+
+
+
+
