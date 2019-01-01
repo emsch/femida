@@ -6,6 +6,7 @@ import time
 import json
 import random
 import errno
+import logging
 
 from flask import (
     Flask, request,
@@ -13,16 +14,16 @@ from flask import (
     render_template,
     redirect, url_for,
     flash, Response,
-    jsonify,
+    jsonify, session,
     stream_with_context
 )
 from flask_login import (
     LoginManager, UserMixin,
-    login_required, login_user,
+    fresh_login_required, login_user,
     logout_user,
     current_user
 )
-
+from flask_oauthlib.client import OAuth
 import bson
 from bson.objectid import ObjectId
 from werkzeug.utils import secure_filename
@@ -39,8 +40,15 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 app.config['SESSION_TYPE'] = 'memcached'
 app.config["MONGO_URI"] = f"mongodb://{MONGO_HOST}:27017/femida"
+app.config['SESSION_PROTECTION'] = 'strong'
 app.secret_key = os.environ['FEMIDA_SECRET_KEY']
 app.debug = os.environ.get('FEMIDA_DEBUG', False)
+
+
+# For OAUTH, theese keys must be moved to ENV and reissued
+app.config['GOOGLE_ID'] = os.environ.get("GOOGLE_ID")
+app.config['GOOGLE_SECRET'] = os.environ.get("GOOGLE_SECRET")
+oauth = OAuth(app)
 
 from database import mongo  # noqa
 mongo.init_app(app)
@@ -53,13 +61,31 @@ login_manager.init_app(app)
 login_manager.login_view = "login"
 
 
+google = oauth.remote_app(
+    'google',
+    consumer_key=app.config.get('GOOGLE_ID'),
+    consumer_secret=app.config.get('GOOGLE_SECRET'),
+    request_token_params={
+        'scope': 'email'
+    },
+    base_url='https://www.googleapis.com/oauth2/v1/',
+    request_token_url=None,
+    access_token_method='POST',
+    access_token_url='https://accounts.google.com/o/oauth2/token',
+    authorize_url='https://accounts.google.com/o/oauth2/auth',
+)
+
+
 # silly user model
 class User(UserMixin):
 
-    def __init__(self, id):
-        self.id = id
-        self.name = "user" + str(id)
+    def __init__(self, id, email=None, picture=None):
+        self.id = email
+        self.name = email
         self.password = self.name + "_secret"
+        self.email = email
+        self.picture = picture
+        self.session_id = id #this will be deprecated
 
     def __repr__(self):
         return "%d/%s/%s" % (self.id, self.name, self.password)
@@ -121,7 +147,7 @@ def send_static(path):
 @app.route('/form.html')
 @app.route('/index.html')
 @app.route('/')
-@login_required
+@fresh_login_required
 def serve_form():
     candidate_id = request.args.get('id', None)
     if candidate_id is None:
@@ -178,7 +204,7 @@ def serve_form():
 
 
 @app.route('/pdf.html')
-@login_required
+@fresh_login_required
 def serve_pdf():
     return render_template('pdf.html')
 
@@ -303,41 +329,22 @@ def handle_pdf():
     return redirect(url_for('serve_pdf'))
 
 
-# somewhere to login
-@app.route("/login", methods=["GET", "POST"])
+@app.route('/login')
 def login():
-    # FROM https://github.com/shekhargulati/flask-login-example/blob/master/flask-login-example.py
-    # FOR NOW LOGINS ALL USES
-    user = User(str(uuid.uuid1())[:8])
+    session.pop('google_token', None)
+    return google.authorize(callback=url_for('authorized', _external=True))
+
+
+@app.route('/login/authorized')
+def authorized():
+    resp = google.authorized_response()
+    session['google_token'] = (resp['access_token'], '')
+    me = google.get('userinfo')
+    user = User(str(uuid.uuid1())[:8], me.data["email"], me.data["picture"])
     login_user(user, remember=True)
-    return redirect(request.args.get("next"))
 
-    # if request.method == 'POST':
-    #     username = request.form['username']
-    #     password = request.form['password']
-    #     if password == username + "_secret":
-    #         id = username.split('user')[1]
-    #         user = User(id)
-    #         login_user(user)
-    #         return redirect(request.args.get("next"))
-    #     else:
-    #         return abort(401)
-    # else:
-    #     return Response('''
-    #     <form action="" method="post">
-    #         <p><input type=text name=username>
-    #         <p><input type=password name=password>
-    #         <p><input type=submit value=Login>
-    #     </form>
-    #     ''')
-
-
-# somewhere to logout
-@app.route("/logout")
-@login_required
-def logout():
-    logout_user()
-    return Response('<p>Logged out</p>')
+    #return jsonify({"data": session.get('google_token'), "resp": resp, "medata": me.data})
+    return redirect("../../")
 
 
 # handle login failed
@@ -349,7 +356,13 @@ def page_not_found(e):
 # callback to reload the user object
 @login_manager.user_loader
 def load_user(userid):
-    return User(userid)
+    # this will logout user if he logouts his Google account
+    try:
+        me = google.get('userinfo')
+        return User(userid, me.data['email'], me.data['picture'])
+    except Exception as e:
+        return None
+
 
 
 @stream_with_context
@@ -368,7 +381,7 @@ def event_stream():
 
 
 @app.route("/manager_flow")
-@login_required
+@fresh_login_required
 def manager_flow():
     return Response(event_stream(), mimetype="text/event-stream")
 
@@ -408,7 +421,7 @@ COLUMNS = [
 
 
 @app.route('/monitor.html', methods=["GET", "POST"])
-@login_required
+@fresh_login_required
 def serve_monitor():
     if request.method == 'POST':
         form = dict(request.form.items())
@@ -439,7 +452,7 @@ def serve_monitor():
 
 
 @app.route("/get_db.json")
-@login_required
+@fresh_login_required
 def get_db():
     # Возвращает базу подсказок для формы
     names = []
@@ -460,6 +473,19 @@ def get_db():
 from export import mod_export as export_module  # noqa
 app.register_blueprint(export_module)
 
+#@app.route('/token')
+@google.tokengetter
+def get_google_oauth_token():
+    return session.get('google_token')
+
+@app.route('/userinfo')
+@fresh_login_required
+def get_auth_info():
+    me = google.get('userinfo')
+    resp = google.authorized_response()
+    return jsonify({"data": me.data, "session": str(session), "resp": resp, "is_fresh": session['_fresh']})
+
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', processes=10)
+
