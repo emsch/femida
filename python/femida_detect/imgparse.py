@@ -24,6 +24,22 @@ BORDER_TOP = np.array([
 ])
 BORDER_BOTTOM = BORDER_TOP + 83
 
+TOP_BLACK_LINE_POSITIONS = (1225, 1275)
+TOP_BLACK_LINE_LEFT_RIGHT = 400
+TOP_BLACK_LINE_DIFF_THRESHOLD = 40
+
+
+def need_flip(image):
+    # there is a black line above, we use them to guess if we need to flip image
+    diff = (image[  # take hand specified slides
+            TOP_BLACK_LINE_POSITIONS[0]:TOP_BLACK_LINE_POSITIONS[1],
+            TOP_BLACK_LINE_LEFT_RIGHT:-TOP_BLACK_LINE_LEFT_RIGHT].astype(float)
+            - image[  # abd from the mirrored bottom position
+              -TOP_BLACK_LINE_POSITIONS[1]:-TOP_BLACK_LINE_POSITIONS[0],
+              TOP_BLACK_LINE_LEFT_RIGHT:-TOP_BLACK_LINE_LEFT_RIGHT].astype(float))
+    diff = diff[abs(diff) > TOP_BLACK_LINE_DIFF_THRESHOLD]
+    return np.sign((diff > 0)-.5).mean() > 0
+
 
 LABELS = ('A', 'B', 'C', 'D', 'E')
 QUESTIONS = tuple(range(1, 41))
@@ -97,7 +113,8 @@ def crop_image(image):
         box = np.int0(box)
 
         # no noise condition
-        if (rect[1][0] > 80) and (rect[1][1] > 80):
+        SUPERPARAM = 60 #TODO KILL feriat
+        if (rect[1][0] > SUPERPARAM) and (rect[1][1] > SUPERPARAM):
             statistics = get_statistics(image, box)
             if np.mean(statistics) < 100:
                 allowed_boxes.append(rect)
@@ -165,6 +182,11 @@ def validate_qr_code(image):
 
 class CroppedAnswers(object):
     def __init__(self, cropped, validate_qr=False):
+        if need_flip(cropped):
+            cropped = cropped[::-1, ::-1]
+            self.flipped = True
+        else:
+            self.flipped = False
         if validate_qr:
             validate_qr_code(cropped)
         self.cropped = cropped
