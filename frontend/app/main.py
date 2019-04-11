@@ -456,6 +456,11 @@ def serve_monitor():
         fios = read_runtime_settings().get('names_database', "")
         return render_template('monitor.html', table_data=data, table_columns=COLUMNS, fios=fios)
 
+def try_except(full_name, ind) -> string:
+    try:
+        return full_name[ind]
+    except:
+        return '-'
 
 @app.route("/get_db.json")
 @fresh_login_required
@@ -466,10 +471,10 @@ def get_db():
     patronymics = []
     fios = read_runtime_settings().get('names_database', "")
     for line in fios.split('\n'):
-        surname, name, patronymic = line.strip().split(';')
-        names.append(name)
-        surnames.append(surname)
-        patronymics.append(patronymic)
+        full_name = line.strip().split(';')
+        names.append(try_except(full_name, 1))
+        surnames.append(try_except(full_name, 0))
+        patronymics.append(try_except(full_name, 2))
     names = list(set(names))
     surnames = list(set(surnames))
     patronymics = list(set(patronymics))
