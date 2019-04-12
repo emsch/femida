@@ -472,8 +472,8 @@ def get_db():
     fios = read_runtime_settings().get('names_database', "")
     for line in fios.split('\n'):
         full_name = line.strip().split(';')
-        names.append(try_except(full_name, 1))
         surnames.append(try_except(full_name, 0))
+        names.append(try_except(full_name, 1))
         patronymics.append(try_except(full_name, 2))
     names = list(set(names))
     surnames = list(set(surnames))
