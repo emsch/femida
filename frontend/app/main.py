@@ -170,7 +170,7 @@ def serve_form():
             return render_template('form.html', no_more_candidates=True)
 
     num_candidates = candidates.count()
-    K = read_runtime_settings()['hand_checks_gap']
+    K = int(read_runtime_settings()['hand_checks_gap'])
     HK = (hash(current_user.get_id()) ^ num_candidates) % K
     last = None
     for candidate in candidates:
@@ -466,10 +466,14 @@ def get_db():
     patronymics = []
     fios = read_runtime_settings().get('names_database', "")
     for line in fios.split('\n'):
-        surname, name, patronymic = line.strip().split(';')
-        names.append(name)
-        surnames.append(surname)
-        patronymics.append(patronymic)
+        line = line.strip().split(';', maxsplit=1)
+        surnames.append(line[0].strip())
+        if len(line) > 1:
+            line = line[1].strip().split(';', maxsplit=1)
+            names.append(line[0].strip())
+            if len(line) > 1:
+                patronymics.append(line[1].strip())
+
     names = list(set(names))
     surnames = list(set(surnames))
     patronymics = list(set(patronymics))
