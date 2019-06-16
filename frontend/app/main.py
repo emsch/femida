@@ -170,7 +170,7 @@ def serve_form():
             return render_template('form.html', no_more_candidates=True)
 
     num_candidates = candidates.count()
-    K = read_runtime_settings()['hand_checks_gap']
+    K = int(read_runtime_settings()['hand_checks_gap'])
     HK = (hash(current_user.get_id()) ^ num_candidates) % K
     last = None
     for candidate in candidates:
