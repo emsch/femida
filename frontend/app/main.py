@@ -259,6 +259,10 @@ def handle_data():
     session_id = current_user.get_id()
     answer_id = form['id']
 
+    fio = f"{form['surname'] if form['surname'] else ''};{form['name'] if form['name'] else ''};{form['patronymic'] if form['patronymic'] else ''}"
+    fios = read_runtime_settings().get('names_database', "")
+    update_runtime_settings(names_database=(f'{fios}\r\n{fio}' if fios else fio))
+    
     personal = {
         "class": form['class'], "name": form['name'],
         "surname": form['surname'], "patronymic": form['patronymic'],
@@ -475,7 +479,7 @@ def get_db():
                 if line[0]: names.append(line[0].strip())
             if len(line) > 1: 
                 if line[1]: patronymics.append(line[1].strip())
-                
+
     names = list(set(names))
     surnames = list(set(surnames))
     patronymics = list(set(patronymics))
