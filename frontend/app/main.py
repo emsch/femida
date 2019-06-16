@@ -147,7 +147,6 @@ def send_static(path):
 @app.route('/form.html')
 @app.route('/index.html')
 @app.route('/')
-@fresh_login_required
 def serve_form():
     candidate_id = request.args.get('id', None)
     if candidate_id is None:
@@ -209,7 +208,6 @@ def serve_form():
 
 
 @app.route('/pdf.html')
-@fresh_login_required
 def serve_pdf():
     return render_template('pdf.html')
 
@@ -259,10 +257,10 @@ def handle_data():
     session_id = current_user.get_id()
     answer_id = form['id']
 
-    fio = f"{form['surname'] if form['surname'] else ''};{form['name'] if form['name'] else ''};{form['patronymic'] if form['patronymic'] else ''}"
+    fio = f"{form['surname']};{form['name']};{form['patronymic']}"
     fios = read_runtime_settings().get('names_database', "")
     update_runtime_settings(names_database=(f'{fios}\r\n{fio}' if fios else fio))
-    
+
     personal = {
         "class": form['class'], "name": form['name'],
         "surname": form['surname'], "patronymic": form['patronymic'],
@@ -391,7 +389,6 @@ def event_stream():
 
 
 @app.route("/manager_flow")
-@fresh_login_required
 def manager_flow():
     return Response(event_stream(), mimetype="text/event-stream")
 
@@ -431,7 +428,6 @@ COLUMNS = [
 
 
 @app.route('/monitor.html', methods=["GET", "POST"])
-@fresh_login_required
 def serve_monitor():
     if request.method == 'POST':
         form = dict(request.form.items())
@@ -462,7 +458,6 @@ def serve_monitor():
 
 
 @app.route("/get_db.json")
-@fresh_login_required
 def get_db():
     # Возвращает базу подсказок для формы
     names = []
@@ -472,13 +467,13 @@ def get_db():
     for line in fios.split('\n'):
         line = line.strip().split(';', maxsplit=1)
 
-        if line:
+        if len(line):
             if line[0]: surnames.append(line[0].strip())
             if len(line) > 1: 
                 line = line[1].strip().split(';', maxsplit=1)
                 if line[0]: names.append(line[0].strip())
-            if len(line) > 1: 
-                if line[1]: patronymics.append(line[1].strip())
+                if len(line) > 1 and line[1]: 
+                    patronymics.append(line[1].strip())
 
     names = list(set(names))
     surnames = list(set(surnames))
@@ -495,7 +490,6 @@ def get_google_oauth_token():
     return session.get('google_token')
 
 @app.route('/userinfo')
-@fresh_login_required
 def get_auth_info():
     me = google.get('userinfo')
     resp = google.authorized_response()
