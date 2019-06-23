@@ -105,7 +105,7 @@ def read_runtime_settings():
             # Минимальное число ручных проверок (перекрытие)
             'hand_checks': os.environ.get('FEMIDA_HAND_CHECKS', 2),
             'hand_checks_gap': os.environ.get('FEMIDA_HAND_CHECKS_GAP', 10),
-            'len_of_audience': list(map(int, os.environ.get('LEN_OF_AUDIENCE', '4,4').strip().split(','))),
+            'len_of_audience': list(map(int, os.environ.get('LEN_OF_AUDIENCE', '3,3').strip().split(','))),
             'names_database': '',
         })
         settings = read_runtime_settings()
