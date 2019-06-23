@@ -23,8 +23,7 @@
     <link href="css/form.css" rel="stylesheet" id="bootstrap-css">
     <link href="css/autocomplete.css" rel="stylesheet">
     <script src="js/form.js"></script> 
-    <script src="js/autocomplete.js"></script> 
-
+    <script src="js/autocomplete.js"></script>
 
 
   </head>
@@ -106,21 +105,24 @@ target="blank">http://bradfrostweb.com/blog/post/float-label-pattern/</a></small
                 </div>
                 <div class="form-group float-label-control">
                     <label for="">Класс</label>
-                    <input name='class' type="form-control" class="form-control" placeholder="Класс" value="{{ params.class }}" pattern="[89]|10|11|-" required>
+                    <input id='class' name='class' type="form-control" class="form-control" value="{{ params.class }}"
+                           placeholder="Класс" pattern="[89]|10|11|-" required>
+                    
                 </div>
                 <hr>
                 <label class="form-check-input h4">
-                  <input type="radio" id='type' name='type' 
-                    value='mat' {% if params.type == 'mat' %}checked{% endif %} required> МАТ</input>  
+                  <input type="radio" id='mat' name='type'
+                    value='mat' {% if params.type == "mat" %}checked{% endif %} required> МАТ</input>  
                 </label>
                 &nbsp; &nbsp; &nbsp;
                 <label class="form-check-input h4">
-                  <input type="radio" id='type' name='type' 
-                    value='ot' {% if params.type == 'ot' %}checked{% endif %} required> ОТ</input>  
+                  <input type="radio" id='ot' name='type' 
+                    value='ot' {% if params.type == "ot" %}checked{% endif %} required> ОТ</input>  
                 </label>
                 <div class="form-group float-label-control">
                     <label for="">Вариант</label>
-                    <input name='variant' type="form-control" class="form-control" placeholder="Вариант" value="{{ params.variant }}" pattern="\d{3,5}|-" required>
+                    <input id='variant' name='variant' type="form-control" class="form-control" value="{{ params.variant }}"
+                           placeholder="Вариант" pattern="\d{3,5}|-" required>
                 </div>
                 <hr>
             </div>
@@ -157,7 +159,7 @@ target="blank">http://bradfrostweb.com/blog/post/float-label-pattern/</a></small
                                         <option value="A" {% if ans == 'A' %}selected{% endif %}>A</option>
                                         <option value="B" {% if ans == 'B' %}selected{% endif %}>B</option>
                                         <option value="C" {% if ans == 'C' %}selected{% endif %}>C</option>
-                                        <option value="D" {% if ans == 'D' %}selected{% endif %} >D</option>
+                                        <option value="D" {% if ans == 'D' %}selected{% endif %}>D</option>
                                         <option value="E" {% if ans == 'E' %}selected{% endif %}>E</option>
                                         <option value="F" {% if ans == 'F' %}selected{% endif %}>F</option>
                                         <option value="NA" {% if ans == 'NA' %}selected{% endif %}>NA</option>
@@ -217,6 +219,10 @@ target="blank">http://bradfrostweb.com/blog/post/float-label-pattern/</a></small
 
                 </div>
         </div>
+        <script>
+            autocomplete(document.getElementById("class"), ["{{ params.class }}"]);
+            autocomplete(document.getElementById("variant"), ["{{ params.variant }}"]);
+        </script>
         {% endif %}
     </form></div>
     <br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br>
@@ -232,7 +238,6 @@ $.getJSON('/get_db.json', function(data) {
     autocomplete(document.getElementById("name"), data.names);
     autocomplete(document.getElementById("patronymic"), data.patronymics);
 });
-
 </script>
 
 <script>
@@ -245,8 +250,17 @@ $('#manualModal').on('hidden.bs.modal', function (e) {
 </script>
 
 
-
   </body>
+  <script>
+    (window).load($.debounce(200,function(){
+    $('input:-webkit-autofill').each(function(){
+        if ($(this).val().length !== "") {
+            $(this).siblings('label, i').addClass('active');
+        }
+    });
+    }));
+  </script>
+
 </html>
 
 

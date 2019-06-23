@@ -105,6 +105,7 @@ def read_runtime_settings():
             # Минимальное число ручных проверок (перекрытие)
             'hand_checks': os.environ.get('FEMIDA_HAND_CHECKS', 2),
             'hand_checks_gap': os.environ.get('FEMIDA_HAND_CHECKS_GAP', 10),
+            'len_of_audience': list(map(int, os.environ.get('LEN_OF_AUDIENCE', '4,4').strip().split(','))),
             'names_database': '',
         })
         settings = read_runtime_settings()
@@ -147,7 +148,6 @@ def send_static(path):
 @app.route('/form.html')
 @app.route('/index.html')
 @app.route('/')
-@fresh_login_required
 def serve_form():
     candidate_id = request.args.get('id', None)
     if candidate_id is None:
@@ -209,9 +209,9 @@ def serve_form():
 
 
 @app.route('/pdf.html')
-@fresh_login_required
 def serve_pdf():
-    return render_template('pdf.html')
+    params = {'len_of_audience': read_runtime_settings()['len_of_audience']}
+    return render_template('pdf.html', params=params)
 
 
 def valid_form(form):
@@ -387,7 +387,6 @@ def event_stream():
 
 
 @app.route("/manager_flow")
-@fresh_login_required
 def manager_flow():
     return Response(event_stream(), mimetype="text/event-stream")
 
@@ -427,7 +426,6 @@ COLUMNS = [
 
 
 @app.route('/monitor.html', methods=["GET", "POST"])
-@fresh_login_required
 def serve_monitor():
     if request.method == 'POST':
         form = dict(request.form.items())
@@ -458,7 +456,6 @@ def serve_monitor():
 
 
 @app.route("/get_db.json")
-@fresh_login_required
 def get_db():
     # Возвращает базу подсказок для формы
     names = []
@@ -489,7 +486,6 @@ def get_google_oauth_token():
     return session.get('google_token')
 
 @app.route('/userinfo')
-@fresh_login_required
 def get_auth_info():
     me = google.get('userinfo')
     resp = google.authorized_response()
