@@ -98,8 +98,14 @@ target="blank">http://bradfrostweb.com/blog/post/float-label-pattern/</a></small
             </div>
             <div class="col-sm-4">
                 <div class="form-group float-label-control">
-                    <label for="">Например: 519_9_МАТ_2</label>
-                    <input name='pdf_comment' type="form-control" class="form-control" placeholder="Аудитория_Класс_ТипТеста_Вариант" required>
+                    <label for="">Например: 519_9_МАТ_234</label>
+                    <input id='pdf_comment' name='pdf_comment' type="form-control" class="form-control" placeholder="Аудитория_Класс_ТипТеста_Вариант" required>
+                    <script>
+                        var from = "{{ params.len_of_audience[0] }}";
+                        var to = "{{ params.len_of_audience[1] }}";
+                        var text = "[0-9]{"+from+","+to+"}_([89]|10|11|)_(ОТ|МАТ)_[0-9]{3,5}";
+                        document.getElementById('pdf_comment').setAttribute("pattern", text);
+                    </script> 
                 </div>
             </div>
             <div class="col-sm-4">
@@ -119,6 +125,7 @@ target="blank">http://bradfrostweb.com/blog/post/float-label-pattern/</a></small
 
 
   </body>
+  
 </html>
 
 
