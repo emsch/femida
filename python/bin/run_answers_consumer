@@ -69,6 +69,7 @@ def main(args):
     )
     femida_detect.utils.setup_rs(conn, logger)
     answers = conn[DB][ANSWERS]
+    pdfs = conn[DB][PDFS]
     logger.info(f'Loading model from {args.model_path}')
     predict = femida_detect.detect.eval.load(args.model_path, ('cuda' if args.cuda else 'cpu'))
     logger.info(f'Started listening')
@@ -96,9 +97,22 @@ def main(args):
             test_updates = [{
                 'session_id': 'ocr', 'updates': {}, 'date': datetime.datetime.now()}
             ]
+
+            logger.info(f"UUID={task['UUID']}")
+            pdf = pdfs.find({'UUID': task['UUID']})[0]
+            pdf_comment = pdf['pdf_comment']
+            _, class_, type_, variant = pdf_comment.split('_')
+
+            if type_ == '\u041e\u0422':
+                type_ = 'ot'  
+            else:
+                type_ = 'mat'
+
             result = dict(
                 page=task['i'],
-                personal=[],
+                personal=[{'class': class_,
+                          'type': type_,
+                          'variant': variant}],
                 UUID=task['UUID'],
                 requested_manual=[],
                 manual_checks=[],
