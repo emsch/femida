@@ -212,7 +212,9 @@ def serve_form():
 @app.route('/pdf.html')
 @fresh_login_required
 def serve_pdf():
-    params = {'len_of_audience': read_runtime_settings()['len_of_audience']}
+    len_of_audience = read_runtime_settings()['len_of_audience']
+    pattern = "([Пп][0-9]|[0-9]{%d,%d})_([89]|10|11|)_(ОТ|МАТ)_[0-9]{3,5}" % (len_of_audience[0], len_of_audience[1])
+    params = {'pattern': pattern}
     return render_template('pdf.html', params=params)
 
 
@@ -500,4 +502,4 @@ def get_auth_info():
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', processes=10)
-
+    
