@@ -9,7 +9,7 @@ services:
       - ./mongo/mongod.conf:/etc/mongo/mongod.conf
     ports:
       - 27017:27017
-    command: mongod --smallfiles --config /etc/mongo/mongod.conf
+    command: mongod --config /etc/mongo/mongod.conf
 
   mongo-express:
     image: mongo-express
