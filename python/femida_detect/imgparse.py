@@ -47,7 +47,7 @@ if "FEMIDA_OCR_BORDER_TOP" not in os.environ:
     BORDER_TOP = np.array([1322, 1453, 1583, 1715, 1848, 2092, 2224, 2353, 2484, 2613])
 else:
     BORDER_TOP = np.array(
-        list(map(int, os.environ["FEMIDA_OCR_BORDER_TOP"]).split(","))
+        list(map(int, os.environ["FEMIDA_OCR_BORDER_TOP"].split(",")))
     )
 
 MARGIN_VERTICAL = int(os.environ.get("FEMIDA_OCR_MARGIN_VERTICAL", 83))
