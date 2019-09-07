@@ -4,25 +4,55 @@ import json
 import functools
 import collections
 import itertools
+import os
 
 from .utils import listit
 
 
-BORDER_LEFT = np.array([
-    198,  332,  461,  595,
-    727,  857,  989, 1117,
-    1252, 1384, 1516, 1651,
-    1783, 1914, 2047, 2176,
-    2309, 2442, 2573, 2706
-])
-BORDER_RIGHT = BORDER_LEFT + 84
+if "FEMIDA_OCR_BORDER_LEFT" not in os.environ:
+    BORDER_LEFT = np.array(
+        [
+            198,
+            332,
+            461,
+            595,
+            727,
+            857,
+            989,
+            1117,
+            1252,
+            1384,
+            1516,
+            1651,
+            1783,
+            1914,
+            2047,
+            2176,
+            2309,
+            2442,
+            2573,
+            2706,
+        ]
+    )
+else:
+    BORDER_LEFT = np.array(
+        list(map(int, os.environ["FEMIDA_OCR_BORDER_LEFT"].split(",")))
+    )
 
-BORDER_TOP = np.array([
-    1322, 1453, 1583, 1715,
-    1848, 2092, 2224, 2353,
-    2484, 2613
-])
-BORDER_BOTTOM = BORDER_TOP + 83
+MARGIN_HORIZONTAL = int(os.environ.get("FEMIDA_OCR_MARGIN_HORIZONTAL", 84))
+
+BORDER_RIGHT = BORDER_LEFT + MARGIN_HORIZONTAL
+
+if "FEMIDA_OCR_BORDER_TOP" not in os.environ:
+    BORDER_TOP = np.array([1322, 1450, 1580, 1715, 1843, 2087, 2217, 2349, 2479, 2610])
+else:
+    BORDER_TOP = np.array(
+        list(map(int, os.environ["FEMIDA_OCR_BORDER_TOP"].split(",")))
+    )
+
+MARGIN_VERTICAL = int(os.environ.get("FEMIDA_OCR_MARGIN_VERTICAL", 83))
+
+BORDER_BOTTOM = BORDER_TOP + MARGIN_VERTICAL
 
 TOP_BLACK_LINE_POSITIONS = (1225, 1275)
 TOP_BLACK_LINE_LEFT_RIGHT = 400
@@ -31,21 +61,26 @@ TOP_BLACK_LINE_DIFF_THRESHOLD = 40
 
 def need_flip(image):
     # there is a black line above, we use them to guess if we need to flip image
-    diff = (image[  # take hand specified slides
-            TOP_BLACK_LINE_POSITIONS[0]:TOP_BLACK_LINE_POSITIONS[1],
-            TOP_BLACK_LINE_LEFT_RIGHT:-TOP_BLACK_LINE_LEFT_RIGHT].astype(float)
-            - image[  # abd from the mirrored bottom position
-              -TOP_BLACK_LINE_POSITIONS[1]:-TOP_BLACK_LINE_POSITIONS[0],
-              TOP_BLACK_LINE_LEFT_RIGHT:-TOP_BLACK_LINE_LEFT_RIGHT].astype(float))
+    diff = image[  # take hand specified slides
+        TOP_BLACK_LINE_POSITIONS[0] : TOP_BLACK_LINE_POSITIONS[1],
+        TOP_BLACK_LINE_LEFT_RIGHT:-TOP_BLACK_LINE_LEFT_RIGHT,
+    ].astype(
+        float
+    ) - image[  # abd from the mirrored bottom position
+        -TOP_BLACK_LINE_POSITIONS[1] : -TOP_BLACK_LINE_POSITIONS[0],
+        TOP_BLACK_LINE_LEFT_RIGHT:-TOP_BLACK_LINE_LEFT_RIGHT,
+    ].astype(
+        float
+    )
     diff = diff[abs(diff) > TOP_BLACK_LINE_DIFF_THRESHOLD]
-    return np.sign((diff > 0)-.5).mean() > 0
+    return np.sign((diff > 0) - 0.5).mean() > 0
 
 
-LABELS = ('A', 'B', 'C', 'D', 'E')
+LABELS = ("A", "B", "C", "D", "E")
 QUESTIONS = tuple(range(1, 41))
 WIDTH = 3000
 HEIGHT = int(WIDTH * 578 / 403)
-Box = collections.namedtuple('Box', 'center,delta,angle')
+Box = collections.namedtuple("Box", "center,delta,angle")
 
 
 def box_to_slice(box):
@@ -62,14 +97,14 @@ def box_to_slice(box):
 def _get_small_rectangles_positions_middle():
     xl, yt = np.meshgrid(BORDER_LEFT, BORDER_TOP)
     xr, yb = np.meshgrid(BORDER_RIGHT, BORDER_BOTTOM)
-    xc, yc = (xl+xr)/2, (yt+yb)/2
-    dx, dy = (xl-xr), (yb-yt)
+    xc, yc = (xl + xr) / 2, (yt + yb) / 2
+    dx, dy = (xl - xr), (yb - yt)
     labels = LABELS
     result = []
     for i, j in itertools.product(range(xc.shape[0]), range(xc.shape[1])):
-        question = QUESTIONS[j + (len(QUESTIONS)//2) * (i // len(LABELS))]
+        question = QUESTIONS[j + (len(QUESTIONS) // 2) * (i // len(LABELS))]
         label = labels[i % len(LABELS)]
-        box = (question, label), Box((xc[i, j], yc[i, j]), (dx[i, j], dy[i, j]), 0.)
+        box = (question, label), Box((xc[i, j], yc[i, j]), (dx[i, j], dy[i, j]), 0.0)
         result.append(box)
     return tuple(result)
 
@@ -104,7 +139,9 @@ def crop_image(image):
 
     kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (7, 7))
     closed = cv2.morphologyEx(edged, cv2.MORPH_CLOSE, kernel)
-    cnts = cv2.findContours(closed.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[1]
+    cnts = cv2.findContours(closed.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[
+        1
+    ]
 
     allowed_boxes = []
     for c in cnts:
@@ -113,19 +150,21 @@ def crop_image(image):
         box = np.int0(box)
 
         # no noise condition
-        SUPERPARAM = 60 #TODO KILL feriat
+        SUPERPARAM = 60  # TODO KILL feriat
         if (rect[1][0] > SUPERPARAM) and (rect[1][1] > SUPERPARAM):
             statistics = get_statistics(image, box)
             if np.mean(statistics) < 100:
                 allowed_boxes.append(rect)
 
     try:
-        nec_boxes = [min(allowed_boxes, key=lambda x: x[0][0] + x[0][1]),
-                     max(allowed_boxes, key=lambda x: x[0][0] + x[0][1]),
-                     min(allowed_boxes, key=lambda x: x[0][0] - x[0][1]),
-                     max(allowed_boxes, key=lambda x: x[0][0] - x[0][1])]
+        nec_boxes = [
+            min(allowed_boxes, key=lambda x: x[0][0] + x[0][1]),
+            max(allowed_boxes, key=lambda x: x[0][0] + x[0][1]),
+            min(allowed_boxes, key=lambda x: x[0][0] - x[0][1]),
+            max(allowed_boxes, key=lambda x: x[0][0] - x[0][1]),
+        ]
     except ValueError as e:
-        raise cv2.error('No rectangles found') from e
+        raise cv2.error("No rectangles found") from e
 
     large = sorted(image.shape)[-1]
     small = sorted(image.shape)[-2]
@@ -147,7 +186,9 @@ def get_small_rectangles(image, xlim=(-np.inf, np.inf), ylim=(-np.inf, np.inf)):
 
     kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (7, 7))
     closed = cv2.morphologyEx(edged, cv2.MORPH_CLOSE, kernel)
-    cnts = cv2.findContours(closed.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[1]
+    cnts = cv2.findContours(closed.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[
+        1
+    ]
 
     allowed_boxes = []
     for c in cnts:
@@ -159,9 +200,10 @@ def get_small_rectangles(image, xlim=(-np.inf, np.inf), ylim=(-np.inf, np.inf)):
             # get rid off "empty squares"
             statistics = get_statistics(image, box)
             if (np.mean(statistics) < 200) and (
-                (rect[0][1] > ylim[0]) and (rect[0][1] < ylim[1])
-                and
-                (rect[0][1] > xlim[0]) and (rect[0][1] < xlim[1])
+                (rect[0][1] > ylim[0])
+                and (rect[0][1] < ylim[1])
+                and (rect[0][1] > xlim[0])
+                and (rect[0][1] < xlim[1])
             ):
                 rect = listit(rect)
                 rect[1][0] += 15
@@ -173,6 +215,7 @@ def get_small_rectangles(image, xlim=(-np.inf, np.inf), ylim=(-np.inf, np.inf)):
 
 def validate_qr_code(image):
     from pyzbar import pyzbar
+
     barcodes = pyzbar.decode(image)
     if barcodes:
         return json.loads(barcodes[0].data.decode("utf-8"))
@@ -210,10 +253,7 @@ class CroppedAnswers(object):
 
     def get_small_rectangles_positions_bottom(self):
         """Experimental"""
-        return get_small_rectangles(
-            self.cropped,
-            ylim=(3000, np.inf)
-        )
+        return get_small_rectangles(self.cropped, ylim=(3000, np.inf))
 
     def recognized_rectangles_image(self):
         image = self.cropped.copy()
@@ -228,11 +268,10 @@ class CroppedAnswers(object):
         img = cv2.cvtColor(self.cropped, cv2.COLOR_BGR2RGB)
         for box in RECTANGLES_POSITIONS_MIDDLE.values():
             if resize is not None:
-                res.append(cv2.resize(img[box_to_slice(box)],
-                                      (resize, resize)))
+                res.append(cv2.resize(img[box_to_slice(box)], (resize, resize)))
             else:
                 res.append(img[box_to_slice(box)])
-        return (np.stack(res).transpose((0, 3, 1, 2))/255.).astype(np.float32)
+        return (np.stack(res).transpose((0, 3, 1, 2)) / 255.0).astype(np.float32)
 
     def get_rectangles_with_labels(self):
         return self.get_rectangles_array(), list(RECTANGLES_POSITIONS_MIDDLE.keys())
@@ -246,9 +285,7 @@ class CroppedAnswers(object):
 
     def plot_predicted(self, labels, only_answers=False):
         recognized = self.cropped.copy()
-        for p, (label, box) in zip(
-                labels, RECTANGLES_POSITIONS_MIDDLE.items()
-        ):
+        for p, (label, box) in zip(labels, RECTANGLES_POSITIONS_MIDDLE.items()):
             if p:
                 box = cv2.boxPoints(box)
                 box = np.int0(box)
