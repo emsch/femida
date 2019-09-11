@@ -7,8 +7,6 @@ services:
     volumes:
       - data:/data/db
       - ./mongo/mongod.conf:/etc/mongo/mongod.conf
-    ports:
-      - 27017:27017
     command: mongod --config /etc/mongo/mongod.conf
 
   mongo-express:
