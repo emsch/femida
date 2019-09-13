@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="Refresh" content="15">
+    <title>Фемида // Распознавание тестов ЭМШ</title>
+
+    <!-- Optional CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+
+    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
+
+  </head>
+  <body>
+    <!-- Optional JavaScript -->
+    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+
+ <div class="container">
+    <div class="row">
+
+        <h2 style="margin-top: 13px;">Фемида // Система распознавания вступительных тестов в ЭМШ</h2>
+<!--         <p class="lead">
+            This new pattern transforms Bootstrap's form fields into modern, fun and user-friendly experiences!<br />
+            <small class="text-muted">Learn more about this pattern at <a href="http://bradfrostweb.com/blog/post/float-label-pattern/" 
+target="blank">http://bradfrostweb.com/blog/post/float-label-pattern/</a></small>
+        </p>
+ -->    
+         <div class="alert alert-warning">
+            <h4>БЕТА-режим</h4>
+            О любых проблемах можно писать в <a href='https://telegram.me/feriat'>чат поддержки в телеграм</a>,
+            либо лично Дмитрию Браженко, Максиму Кочурову или Андрею Петрину.
+        </div>
+        {% if current_user.is_authenticated %}
+            <p>Hi {{ current_user.name }}!
+        {% endif %}
+
+        <div class="container" align="center">
+            <h2 align="center">Рейтинг Исполнителей</h2>
+        </div>
+
+        <p style="align: bottom; margin-top: 1%; margin-left: 67%;"><img src={{ params.cur_user[1] }} alt="" align="top" height=33 width=33 class="img-thumbnail" style="margin: auto 10px;"></img><b>Ваш результат: {{ params.cur_user[2] }}</b></p>
+            
+        
+        <table class="table" style="width: 87%;">
+            <colgroup>
+               <col span="1" style="width: 20%;" align="center">
+               <col span="1" style="width: 60%;" align="center">
+               <col span="1" style="width: 20%;" align="center">
+            </colgroup>
+            
+            <thead class="thead-light">
+            <tr align="center">
+              <th scope="col" align="center">Место</th>
+              <th scope="col" align="center">Электронная почта</th>
+              <th scope="col" align="center">Количество проверок</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for place, picture, username, num_of_tasks in params.leaderboard_data %}
+            <tr align="center" {% if place == 1 %} bgcolor="#ffe033"
+                {% else %} {% if place == 2 %} bgcolor="#d9d9d9"
+                {% else %} {% if place == 3 %} bgcolor="#d6985a"
+                {% else %} bgcolor="#f5f5f5" 
+                {% endif %}{% endif %}{% endif %}>
+              <th scope="row" align="center">{{ place }}</th>
+              <td align="center"><img src={{ picture }} alt="" height=33 width=33 class="img-thumbnail" style="margin: auto 10px;"></img>{{ username }}</td>
+              <td align="center">{{ num_of_tasks }}</td>
+            </tr>
+            {% endfor %}
+            {% if params.clear == True %} 
+            <tr bgcolor="#f5f5f5">
+              <th scope="row"></th>
+              <td align="center"><b>Пока здесь пусто</b></td>
+              <td></td>
+            </tr>
+            {% endif %}
+            <tr>
+              <th scope="row"></th>
+              <td align="right"><b>Всего:</b></td>
+              <td align="center">{{ params.total }}</td>
+            </tr>
+          </tbody>
+        </table>
+
+    </div>
+</div>
+
+<script>
+$('#manualModal').on('shown.bs.modal', function (e) {
+   $('#form').validator("destroy")
+});
+$('#manualModal').on('hidden.bs.modal', function (e) {
+   $('#form').validator()
+})
+</script>
+
+
+  </body>
+
+</html>
+
+
