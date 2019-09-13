@@ -19,8 +19,8 @@ from flask import (
 )
 from flask_login import (
     LoginManager, UserMixin,
-    fresh_login_required, login_user,
-    logout_user,
+    login_user, logout_user,
+    fresh_login_required,
     current_user
 )
 from flask_oauthlib.client import OAuth
@@ -54,6 +54,7 @@ from database import mongo  # noqa
 mongo.init_app(app)
 pdfs = mongo.db.pdfs
 answers = mongo.db.answers
+leaderboard = mongo.db.leaderboard
 
 # flask-login
 login_manager = LoginManager()
@@ -144,6 +145,41 @@ def send_ocr_img(path):
 def send_static(path):
     return send_from_directory('static', path)
 
+@app.route('/leaderboard.html')
+@fresh_login_required
+def serve_leaderboard():
+    users = leaderboard.find({}, {'picture': 1, 'email': 1, 'num_of_checks': 1})
+    users = [tuple(user.values())[1:] for user in users]
+    users = sorted(users, key=lambda x: x[2], reverse=True)
+
+    params = {}
+    params['leaderboard_data'] = []
+    cur_user = False
+    place = 1
+    total = 0
+    if users:
+        flag = users[0][2]
+        for pair in users:
+            if pair[2] != flag:
+                place += 1
+                flag = pair[2]
+            if pair[1] == current_user.email:
+                cur_user = True
+                cur_user_data = [place, pair[0], pair[2]]
+
+            total += pair[2]
+            params['leaderboard_data'].append([place, pair[0], pair[1], pair[2]])
+
+    params['clear'] = not bool(users)
+    if cur_user:
+        params['cur_user'] = cur_user_data
+    else:
+        params['cur_user'] = ['', current_user.picture, 0]
+    print('clear')
+    print(params['clear'])
+    params['total'] = total
+
+    return render_template('leaderboard.html', params=params)
 
 @app.route('/form.html')
 @app.route('/index.html')
@@ -197,7 +233,7 @@ def serve_form():
         personal = candidate['personal'][-1]
     else:
         personal = dict()
-    
+
     params = {
         "img_fio": candidate['img_fio'],
         "img_test_form": candidate['img_test_form'],
@@ -206,6 +242,7 @@ def serve_form():
         'num_candidates': num_candidates,
         **personal,
     }
+
     return render_template('form.html', params=params, no_more_candidates=False)
 
 
@@ -213,7 +250,7 @@ def serve_form():
 @fresh_login_required
 def serve_pdf():
     len_of_audience = read_runtime_settings()['len_of_audience']
-    pattern = "([Пп][0-9]|[0-9]{%d,%d})_([89]|10|11|)_(ОТ|МАТ)_[0-9]{3,5}" % (len_of_audience[0], len_of_audience[1])
+    pattern = "([Пп][0-9]|[0-9]{%d,%d})_([89]|10|11|)_(ОТ|МАТ)_[0-9]{3,5}" % tuple(len_of_audience)
     params = {'pattern': pattern}
     return render_template('pdf.html', params=params)
 
@@ -282,6 +319,7 @@ def handle_data():
         'manual_checks': session_id,
         'test_updates': test_updates
     }
+
     if requested_manual:
         to_bd['requested_manual'] = requested_manual
 
@@ -290,6 +328,19 @@ def handle_data():
         {'$push': to_bd},
     )
     flash('Updated successfully, %s %s' % (updated_id.raw_result, updated_id.upserted_id))
+
+    updated_leaderboard__id = leaderboard.update_one(
+        {"email": current_user.email},
+        {"$inc": {"num_of_checks": 1}},
+    )
+    
+    if not updated_leaderboard__id.raw_result['updatedExisting']:
+        updated_leaderboard__id = leaderboard.insert_one({
+            "UUID": current_user.name,
+            'picture': current_user.picture,
+            "email": current_user.email,
+            "num_of_checks": 1
+        })
 
     # flash(jsonify(dict(form=form, personal=personal, updates=updates, requested_manual=requested_manual)))
 
@@ -455,7 +506,7 @@ def serve_monitor():
         ]))
         for row in data:
             row['comment'] = row['_id']['comment']
-        print(data)
+
         # other column settings -> http://bootstrap-table.wenzhixin.net.cn/documentation/#column-options
         fios = read_runtime_settings().get('names_database', "")
         return render_template('monitor.html', table_data=data, table_columns=COLUMNS, fios=fios)
