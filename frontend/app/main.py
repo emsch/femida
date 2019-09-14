@@ -81,12 +81,12 @@ google = oauth.remote_app(
 class User(UserMixin):
 
     def __init__(self, id, email=None, picture=None):
-        self.id = 1
-        self.name = 'olk'
+        self.id = id
+        self.name = email
         self.password = self.name + "_secret"
-        self.email = 'olk'
-        self.picture = "https://lh5.googleusercontent.com/-RohlXSqteco/AAAAAAAAAAI/AAAAAAAAAAA/yHiojxYgfdU/photo.jpg"
-        self.session_id = 1 #this will be deprecated
+        self.email = email
+        self.picture = picture
+        self.session_id = id #this will be deprecated
 
     def __repr__(self):
         return "%d/%s/%s" % (self.id, self.name, self.password)
