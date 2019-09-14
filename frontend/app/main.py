@@ -81,12 +81,12 @@ google = oauth.remote_app(
 class User(UserMixin):
 
     def __init__(self, id, email=None, picture=None):
-        self.id = id
-        self.name = email
+        self.id = 1
+        self.name = 'olk'
         self.password = self.name + "_secret"
-        self.email = email
-        self.picture = picture
-        self.session_id = id #this will be deprecated
+        self.email = 'olk'
+        self.picture = "https://lh5.googleusercontent.com/-RohlXSqteco/AAAAAAAAAAI/AAAAAAAAAAA/yHiojxYgfdU/photo.jpg"
+        self.session_id = 1 #this will be deprecated
 
     def __repr__(self):
         return "%d/%s/%s" % (self.id, self.name, self.password)
@@ -151,11 +151,10 @@ def serve_leaderboard():
     users = leaderboard.find({}, {'picture': 1, 'email': 1, 'num_of_checks': 1})
     users = [[user['picture'], user['email'], user['num_of_checks']] for user in users]
     users = sorted(users, key=lambda x: x[2], reverse=True)
+    all_users_num_of_checks = [user[2] for user in users]
     users = {user[1]: user for user in users} # {email: [picture, email, num_of_checks]}
-    
-    all_users_num_of_checks = [user[2] for user in users.values()]
 
-    places = list(set(all_users_num_of_checks)) # num_of_checks for every user
+    places = list(set(all_users_num_of_checks))[::-1] # num_of_checks for every user
     places = {places[i]: i+1 for i in range(len(places))} # {num_of_checks: place}
 
     params = dict()
