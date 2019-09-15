@@ -111,8 +111,7 @@ def main(args):
             result = dict(
                 page=task['i'],
                 personal=[{'class': class_,
-                          'type': type_,
-                          'variant': variant}],
+                          'type': type_}],
                 UUID=task['UUID'],
                 requested_manual=[],
                 manual_checks=[],
