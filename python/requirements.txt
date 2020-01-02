@@ -7,3 +7,4 @@ git+https://github.com/ferrine/exman.git#egg=exman
 pymongo==3.7.2
 persist-queue==0.4.1
 filelock==3.0.10
+pillow<7
