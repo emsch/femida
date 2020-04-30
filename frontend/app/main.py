@@ -81,7 +81,7 @@ google = oauth.remote_app(
 class User(UserMixin):
 
     def __init__(self, id, email=None, picture=None):
-        self.id = email
+        self.id = id
         self.name = email
         self.password = self.name + "_secret"
         self.email = email
@@ -149,35 +149,18 @@ def send_static(path):
 @fresh_login_required
 def serve_leaderboard():
     users = leaderboard.find({}, {'picture': 1, 'email': 1, 'num_of_checks': 1})
-    users = [tuple(user.values())[1:] for user in users]
+    users = [[user['picture'], user['email'], user['num_of_checks']] for user in users]
     users = sorted(users, key=lambda x: x[2], reverse=True)
+    all_users_num_of_checks = [user[2] for user in users]
+    users = {user[1]: user for user in users} # {email: [picture, email, num_of_checks]}
+
+    places = list(set(all_users_num_of_checks))[::-1] # num_of_checks for every user
+    places = {places[i]: i+1 for i in range(len(places))} # {num_of_checks: place}
 
     params = {}
-    params['leaderboard_data'] = []
-    cur_user = False
-    place = 1
-    total = 0
-    if users:
-        flag = users[0][2]
-        for pair in users:
-            if pair[2] != flag:
-                place += 1
-                flag = pair[2]
-            if pair[1] == current_user.email:
-                cur_user = True
-                cur_user_data = [place, pair[0], pair[2]]
-
-            total += pair[2]
-            params['leaderboard_data'].append([place, pair[0], pair[1], pair[2]])
-
-    params['clear'] = not bool(users)
-    if cur_user:
-        params['cur_user'] = cur_user_data
-    else:
-        params['cur_user'] = ['', current_user.picture, 0]
-    print('clear')
-    print(params['clear'])
-    params['total'] = total
+    params['leaderboard_data'] = [[places[user[2]], *user] for user in users.values()] # [place, picture, email, num_of_checks]
+    params['total'] = sum(all_users_num_of_checks)
+    params['cur_user_num_of_checks'] = users[current_user.email][2]
 
     return render_template('leaderboard.html', params=params)
 
@@ -312,6 +295,15 @@ def handle_data():
                             'comment': form.get('message-text', "")}
     else:
         requested_manual = None
+        updated_leaderboard__id = leaderboard.update(
+            {"email": current_user.name},
+            {"$set": {"UUID": current_user.name,
+                    "picture": current_user.picture,
+                    "email": current_user.name},
+            "$inc": {"num_of_checks": 1}},
+            upsert=True
+        )
+
     test_updates = process_updates(form, date, session_id)
 
     to_bd = {
@@ -328,19 +320,6 @@ def handle_data():
         {'$push': to_bd},
     )
     flash('Updated successfully, %s %s' % (updated_id.raw_result, updated_id.upserted_id))
-
-    updated_leaderboard__id = leaderboard.update_one(
-        {"email": current_user.email},
-        {"$inc": {"num_of_checks": 1}},
-    )
-    
-    if not updated_leaderboard__id.raw_result['updatedExisting']:
-        updated_leaderboard__id = leaderboard.insert_one({
-            "UUID": current_user.name,
-            'picture': current_user.picture,
-            "email": current_user.email,
-            "num_of_checks": 1
-        })
 
     # flash(jsonify(dict(form=form, personal=personal, updates=updates, requested_manual=requested_manual)))
 
@@ -401,6 +380,7 @@ def authorized():
     resp = google.authorized_response()
     session['google_token'] = (resp['access_token'], '')
     me = google.get('userinfo')
+    flash(str(me.data))
     user = User(str(uuid.uuid1())[:8], me.data["email"], me.data["picture"])
     login_user(user, remember=True)
 
