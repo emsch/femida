@@ -67,7 +67,7 @@ google = oauth.remote_app(
     consumer_key=app.config.get('GOOGLE_ID'),
     consumer_secret=app.config.get('GOOGLE_SECRET'),
     request_token_params={
-        'scope': 'email'
+        'scope': ['profile','email']
     },
     base_url='https://www.googleapis.com/oauth2/v1/',
     request_token_url=None,
@@ -80,16 +80,16 @@ google = oauth.remote_app(
 # silly user model
 class User(UserMixin):
 
-    def __init__(self, id, email=None, picture=None):
+    def __init__(self, id, name=None, email=None, picture=None):
         self.id = id
-        self.name = email
-        self.password = self.name + "_secret"
+        self.name = name
         self.email = email
+        self.password = self.email + "_secret"
         self.picture = picture
         self.session_id = id #this will be deprecated
 
     def __repr__(self):
-        return "%d/%s/%s" % (self.id, self.name, self.password)
+        return "%s/%s/%s" % (self.id, self.name, self.password)
 
 
 def allowed_file(filename):
@@ -148,19 +148,19 @@ def send_static(path):
 @app.route('/leaderboard.html')
 @fresh_login_required
 def serve_leaderboard():
-    users = leaderboard.find({}, {'picture': 1, 'email': 1, 'num_of_checks': 1})
-    users = [[user['picture'], user['email'], user['num_of_checks']] for user in users]
-    users = sorted(users, key=lambda x: x[2], reverse=True)
-    all_users_num_of_checks = [user[2] for user in users]
-    users = {user[1]: user for user in users} # {email: [picture, email, num_of_checks]}
+    users = leaderboard.find({}, {'email': 1, 'name': 1, 'picture': 1, 'num_of_checks': 1})
+    users = [[user['email'], user['name'], user['picture'], user['num_of_checks']] for user in users]
+    users = sorted(users, key=lambda x: x[3], reverse=True)
+    all_users_num_of_checks = [user[3] for user in users]
+    users = {user[0]: user[1:] for user in users} # {email: [name, picture, num_of_checks]}
 
-    places = list(set(all_users_num_of_checks))[::-1] # num_of_checks for every user
+    places = list(set(all_users_num_of_checks))[::-1]
     places = {places[i]: i+1 for i in range(len(places))} # {num_of_checks: place}
 
     params = {}
-    params['leaderboard_data'] = [[places[user[2]], *user] for user in users.values()] # [place, picture, email, num_of_checks]
+    params['leaderboard_data'] = [[places[user[2]], *user] for user in users.values()] # [place, name, picture, num_of_checks]
     params['total'] = sum(all_users_num_of_checks)
-    params['cur_user_num_of_checks'] = users[current_user.email][2]
+    params['cur_user_num_of_checks'] = users.get(current_user.email, [0, 0, 0])[2]
 
     return render_template('leaderboard.html', params=params)
 
@@ -296,10 +296,11 @@ def handle_data():
     else:
         requested_manual = None
         updated_leaderboard__id = leaderboard.update(
-            {"email": current_user.name},
-            {"$set": {"UUID": current_user.name,
-                    "picture": current_user.picture,
-                    "email": current_user.name},
+            {"UUID": current_user.email},
+            {"$set": {"UUID": current_user.email,
+                      "email": current_user.email,
+                      "name": current_user.name,
+                      "picture": current_user.picture},
             "$inc": {"num_of_checks": 1}},
             upsert=True
         )
@@ -380,8 +381,7 @@ def authorized():
     resp = google.authorized_response()
     session['google_token'] = (resp['access_token'], '')
     me = google.get('userinfo')
-    flash(str(me.data))
-    user = User(str(uuid.uuid1())[:8], me.data["email"], me.data["picture"])
+    user = User(str(uuid.uuid1())[:8], me.data['name'], me.data["email"], me.data["picture"])
     login_user(user, remember=True)
 
     #return jsonify({"data": session.get('google_token'), "resp": resp, "medata": me.data})
@@ -400,7 +400,7 @@ def load_user(userid):
     # this will logout user if he logouts his Google account
     try:
         me = google.get('userinfo')
-        return User(userid, me.data['email'], me.data['picture'])
+        return User(userid, me.data['name'], me.data['email'], me.data['picture'])
     except Exception as e:
         return None
 

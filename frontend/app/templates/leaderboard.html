@@ -9,7 +9,6 @@
 
     <!-- Optional CSS -->
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
-
     <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -61,17 +60,17 @@ target="blank">http://bradfrostweb.com/blog/post/float-label-pattern/</a></small
             
             <thead class="thead-light">
             <tr align="center">
-              <th scope="col" align="center">Место</th>
-              <th scope="col" align="center">Электронная почта</th>
-              <th scope="col" align="center">Количество проверок</th>
+              <th scope="col" align="center" style="background-color: #363636"><font color="white">Место</font></th>
+              <th scope="col" align="center" style="background-color: #363636"><font color="white">Никнейм</font></th>
+              <th scope="col" align="center" style="background-color: #363636"><font color="white">Количество проверок</font></th>
             </tr>
           </thead>
           <tbody>
-            {% for place, picture, username, num_of_checks in params.leaderboard_data %}
-            <tr align="center" {% if place == 1 %} bgcolor="#ffe033"
+            {% for place, username, picture, num_of_checks in params.leaderboard_data %}
+            <tr align="center" {% if place == 1 %} bgcolor="#ffd700"
                 {% elif place == 2 %} bgcolor="#d9d9d9"
-                {% elif place == 3 %} bgcolor="#d6985a"
-                {% else %} bgcolor="#f5f5f5" 
+                {% elif place == 3 %} bgcolor="#d98f45"
+                {% else %} bgcolor="#999999" 
                 {% endif %}>
               <th scope="row" align="center">{{ place }}</th>
               <td align="center"><img src={{ picture }} alt="" height=33 width=33 class="img-thumbnail" style="margin: auto 10px;"></img>{{ username }}</td>
@@ -79,7 +78,7 @@ target="blank">http://bradfrostweb.com/blog/post/float-label-pattern/</a></small
             </tr>
             {% endfor %}
             {% if params.leaderboard_data.length %} 
-            <tr bgcolor="#f5f5f5">
+            <tr bgcolor="#999999">
               <th scope="row"></th>
               <td align="center"><b>Пока здесь пусто</b></td>
               <td></td>
