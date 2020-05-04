@@ -2,6 +2,9 @@
 Фемида | Система распознавания тестов ЭМШ
 
 
+# TODO feriat
+В марте 2020 feriat@ переписал фронтенд, чтобы он работал **behind traefik proxy**. Инструкция по установке TODO.
+
 # Getting Started
 
 * Pull the repository
