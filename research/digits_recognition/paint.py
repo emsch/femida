@@ -4,7 +4,7 @@ from PIL import Image, ImageDraw
 import numpy as np
 import matplotlib.pyplot as plt
 from keras.models import model_from_json
-model = model_from_json(open("mnist_mega_model_2.json").read())
+model = model_from_json(open("mnist_model_2.json").read())
 model.load_weights('best_great_model_sep_1_7.hdf5')
 current_recognized = None
 import os
