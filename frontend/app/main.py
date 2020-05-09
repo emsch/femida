@@ -8,6 +8,9 @@ import random
 import errno
 import logging
 
+from collections import Counter
+from ast import literal_eval
+
 from flask import (
     Flask, request,
     send_from_directory,
@@ -148,19 +151,19 @@ def send_static(path):
 @app.route('/leaderboard.html')
 @fresh_login_required
 def serve_leaderboard():
-    users = leaderboard.find({}, {'email': 1, 'name': 1, 'picture': 1, 'num_of_checks': 1})
-    users = [[user['email'], user['name'], user['picture'], user['num_of_checks']] for user in users]
-    users = sorted(users, key=lambda x: x[3], reverse=True)
+    users = leaderboard.find({}, {'all_answers': 0})
+    users = [[user['email'], user['name'], user['picture'], user['num_of_checks'], round(user['right_answers']/user['num_of_checks']*100, 1)] for user in users]
+    users = sorted(users, key=lambda x: [x[3], x[4]], reverse=True)
     all_users_num_of_checks = [user[3] for user in users]
-    users = {user[0]: user[1:] for user in users} # {email: [name, picture, num_of_checks]}
+    users = {user[0]: user[1:] for user in users} # {email: [name, picture, num_of_checks, agreement]}
 
     places = list(set(all_users_num_of_checks))[::-1]
     places = {places[i]: i+1 for i in range(len(places))} # {num_of_checks: place}
 
     params = {}
-    params['leaderboard_data'] = [[places[user[2]], *user] for user in users.values()] # [place, name, picture, num_of_checks]
+    params['leaderboard_data'] = [[places[user[2]], *user] for user in users.values()] # [place, name, picture, num_of_checks, agreement]
     params['total'] = sum(all_users_num_of_checks)
-    params['cur_user_num_of_checks'] = users.get(current_user.email, [0, 0, 0])[2]
+    params['cur_user_num_of_checks'] = users.get(current_user.email, [0, 0, 0, 0])[2]
 
     return render_template('leaderboard.html', params=params)
 
@@ -271,6 +274,47 @@ def process_updates(form, date, session_id):
     }
     return test_updates
 
+def get_best_answers(_id):
+    answer_data = answers.find_one({'_id': _id})
+    checks_main = answer_data['personal'][1:]
+    checks_updates = answer_data['test_updates'][1:]
+    requested_manual_users = [req['session_id'] for req in answer_data['requested_manual']]     # not to count checks with requested manual
+    checks_main = [check for check in checks_main if check['session_id'] not in requested_manual_users]
+    checks_updates = [check for check in checks_updates if check['session_id'] not in requested_manual_users]
+
+    answers_by_checks = {}
+    for key in ['class', 'name', 'surname', 'patronymic', 'variant', 'type']:
+        c = Counter([checks_main[i][key] for i in range(len(checks_main))])
+        max_ = max(list(c.values()))
+        best_answers = []
+        for key1, value in c.most_common():
+            if value == max_: best_answers.append(key1)
+            else: break
+
+        answers_by_checks[key] = best_answers
+    
+    updates = [checks_updates[i]['updates'] for i in range(len(checks_updates))]
+    updates = list(map(str, updates))
+    c = Counter(updates)
+    max_ = max(list(c.values()))
+    best_answers = []
+    for key1, value in c.most_common():
+        if value == max_: best_answers.append(key1)
+        else: break
+
+    best_answers = list(map(lambda x: literal_eval(x), best_answers))
+    answers_by_checks['updates'] = best_answers
+
+    return answers_by_checks
+
+def check_if_correct(answers_by_checks, personal, test_updates):
+    personal['updates'] = test_updates['updates']
+    for key in ['class', 'name', 'surname', 'patronymic', 'variant', 'type', 'updates']:
+        if personal[key] not in answers_by_checks[key]:
+            return False
+    else:
+        return True
+
 
 @app.route('/process_form', methods=['POST'])
 def handle_data():
@@ -295,15 +339,6 @@ def handle_data():
                             'comment': form.get('message-text', "")}
     else:
         requested_manual = None
-        updated_leaderboard__id = leaderboard.update(
-            {"UUID": current_user.email},
-            {"$set": {"UUID": current_user.email,
-                      "email": current_user.email,
-                      "name": current_user.name,
-                      "picture": current_user.picture},
-            "$inc": {"num_of_checks": 1}},
-            upsert=True
-        )
 
     test_updates = process_updates(form, date, session_id)
 
@@ -316,14 +351,57 @@ def handle_data():
     if requested_manual:
         to_bd['requested_manual'] = requested_manual
 
+    _id = ObjectId(answer_id)
     updated_id = answers.update_one(
-        {'_id': ObjectId(answer_id)},
+        {'_id': _id},
         {'$push': to_bd},
     )
     flash('Updated successfully, %s %s' % (updated_id.raw_result, updated_id.upserted_id))
 
     # flash(jsonify(dict(form=form, personal=personal, updates=updates, requested_manual=requested_manual)))
 
+
+    if not requested_manual:
+        answers_by_checks = get_best_answers(_id)
+        updated_id = answers.update_one(
+            {'_id': _id},
+            {'$set': {'answers_by_checks': answers_by_checks}},
+        )
+
+        updated_leaderboard__id = leaderboard.update_one(
+            {"UUID": current_user.get_id()},
+            {"$set": {"UUID": current_user.get_id(),
+                      "email": current_user.email,
+                      "name": current_user.name,
+                      "picture": current_user.picture},
+            "$inc": {"num_of_checks": 1}},
+            upsert=True
+        )
+
+        answer = answers.find_one({'_id': _id})
+        personals = answer['personal']
+        test_updates = answer['test_updates']
+        for i in range(1, len(personals)):
+            cur_personal = personals[i]
+            cur_updates = test_updates[i]
+            cur_user_id = cur_personal['session_id']
+            cur_user = leaderboard.find_one({'UUID': cur_user_id})
+            all_answers = cur_user.get('all_answers', {})
+            right_answers = cur_user.get('right_answers', 0)
+            if check_if_correct(answers_by_checks, cur_personal, cur_updates):
+                if not all_answers.get(answer_id, False):
+                    all_answers[answer_id] = True
+                    right_answers += 1
+            else:
+                if all_answers.get(answer_id, False):
+                    all_answers[answer_id] = False
+                    right_answers -= 1
+            
+            updated_leaderboard__id = leaderboard.update_one(
+                {"UUID": cur_user_id},
+                {"$set": {"right_answers": right_answers,
+                        "all_answers": all_answers}})
+        
     # When ready for production
     return redirect(url_for('serve_form'), code=303)
 

@@ -54,7 +54,8 @@ target="blank">http://bradfrostweb.com/blog/post/float-label-pattern/</a></small
         <table class="table" style="width: 87%;">
             <colgroup>
                <col span="1" style="width: 20%;" align="center">
-               <col span="1" style="width: 60%;" align="center">
+               <col span="1" style="width: 40%;" align="center">
+               <col span="1" style="width: 20%;" align="center">
                <col span="1" style="width: 20%;" align="center">
             </colgroup>
             
@@ -63,10 +64,11 @@ target="blank">http://bradfrostweb.com/blog/post/float-label-pattern/</a></small
               <th scope="col" align="center" style="background-color: #363636"><font color="white">Место</font></th>
               <th scope="col" align="center" style="background-color: #363636"><font color="white">Никнейм</font></th>
               <th scope="col" align="center" style="background-color: #363636"><font color="white">Количество проверок</font></th>
+              <th scope="col" align="center" style="background-color: #363636"><font color="white">Согласованность</font></th>
             </tr>
           </thead>
           <tbody>
-            {% for place, username, picture, num_of_checks in params.leaderboard_data %}
+            {% for place, username, picture, num_of_checks, agreement in params.leaderboard_data %}
             <tr align="center" {% if place == 1 %} bgcolor="#ffd700"
                 {% elif place == 2 %} bgcolor="#d9d9d9"
                 {% elif place == 3 %} bgcolor="#d98f45"
@@ -75,18 +77,16 @@ target="blank">http://bradfrostweb.com/blog/post/float-label-pattern/</a></small
               <th scope="row" align="center">{{ place }}</th>
               <td align="center"><img src={{ picture }} alt="" height=33 width=33 class="img-thumbnail" style="margin: auto 10px;"></img>{{ username }}</td>
               <td align="center">{{ num_of_checks }}</td>
+              <td align="center">{{ agreement }}%</td>
             </tr>
             {% endfor %}
-            {% if params.leaderboard_data.length %} 
+            {% if params.leaderboard_data|length == 0 %} 
             <tr bgcolor="#999999">
-              <th scope="row"></th>
-              <td align="center"><b>Пока здесь пусто</b></td>
-              <td></td>
+              <td colspan="4" align='center'><b>Пока здесь пусто</b></td>
             </tr>
             {% endif %}
             <tr>
-              <th scope="row"></th>
-              <td align="right"><b>Всего:</b></td>
+              <td align="right" colspan="3"><b>Всего:</b></td>
               <td align="center">{{ params.total }}</td>
             </tr>
           </tbody>
