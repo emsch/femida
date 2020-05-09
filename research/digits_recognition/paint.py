@@ -5,16 +5,21 @@ import numpy as np
 import matplotlib.pyplot as plt
 from keras.models import model_from_json
 model = model_from_json(open("mnist_mega_model_2.json").read())
-model.load_weights('mnist_mega_model_2')
+model.load_weights('best_great_model_sep_1_7.hdf5')
+current_recognized = None
+import os
+
+if not os.path.exists("paintings"):
+    os.makedirs("paintings")
 
 def save():
-    global image_number
-    filename = f'middle_paintings/image_{image_number}.png'   # image_number increments by 1 at every save
+    global image_number,current_recognized
+    filename = f'paintings/image_{image_number}.png'   # image_number increments by 1 at every save
     image1.save(filename)
     np_image = np.array(image1.resize((28, 28), Image.ANTIALIAS))
     np_image = np.mean(np_image, axis=2)
     plt.imshow(np_image, "gray")
-    filename = f'middle_paintings/small_image_{image_number}.png'
+    filename = f'paintings/{current_recognized}_small_image_{image_number}.png'
     plt.savefig(filename)
     image_number += 1
 
@@ -31,7 +36,7 @@ def activate_paint(e):
 
 
 def paint(e):
-    global lastx, lasty,w, draw, model
+    global lastx, lasty,w, draw, model,current_recognized
     x, y = e.x, e.y
     cv.create_line((lastx, lasty, x, y), width=30)
     #  --- PIL
@@ -41,6 +46,7 @@ def paint(e):
     np_image = np.mean(np_image, axis=2)
     prediction = model.predict(np_image.reshape(1, 28, 28, 1))
     predicted_digit = prediction.argmax()
+    current_recognized = predicted_digit
     confidence = np.max(prediction)
     w["text"] = "Digit: {}, Conf:{}".format(predicted_digit, round(confidence, 2))
 
