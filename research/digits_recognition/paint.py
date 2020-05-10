@@ -1,3 +1,4 @@
+print(1)
 from tkinter import *
 import PIL
 from PIL import Image, ImageDraw
@@ -14,7 +15,7 @@ if not os.path.exists("paintings"):
 
 def save():
     global image_number,current_recognized
-    filename = f'paintings/image_{image_number}.png'   # image_number increments by 1 at every save
+    filename = f'paintings/image_{image_number}.png'
     image1.save(filename)
     np_image = np.array(image1.resize((28, 28), Image.ANTIALIAS))
     np_image = np.mean(np_image, axis=2)
