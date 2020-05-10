@@ -151,12 +151,24 @@ def send_static(path):
 @app.route('/leaderboard.html')
 @fresh_login_required
 def serve_leaderboard():
-    users = leaderboard.find({}, {'all_answers': 0})
-    users = [[user['email'], user['name'], user['picture'], user['num_of_checks'], round(user['right_answers']/user['num_of_checks']*100, 1)] for user in users]
-    users = sorted(users, key=lambda x: [x[3], x[4]], reverse=True)
-    all_users_num_of_checks = [user[3] for user in users]
-    users = {user[0]: user[1:] for user in users} # {email: [name, picture, num_of_checks, agreement]}
+    users = {
+        user['email']: [
+            user['name'], user['picture'], 
+            user['num_of_checks'], 
+            round(user['right_answers']/user['num_of_checks']*100, 1)
+        ]
+        for user in sorted(leaderboard.find({}, {'_id': 0, 'UUID': 0, 'all_answers': 0}), key=lambda x: [x['num_of_checks'], x['right_answers']], reverse=True)
+    } # {email: [name, picture, num_of_checks, agreement]}
 
+    # num_of_checks - кол-во проверок без подсчета отправленных на ручную проверку
+    # agreement - согласованность, подсчитанная так:
+    # Каждый раз, когда отправляется проверенная работа, обновляется набор правильных ответов на каждый из пунктов (класс, вариант, тип, ФИО) для этой работы,
+    # далее проходится по всем людям, которые проверяли эту работу, и у них обновляется/остается такой же соответствие/несоответствие с мнением большинства,
+    # где счетчик проверок, совпадающих с мнением большинства - right_answers,
+    # в итоге согласованность = <кол-во соответствующих большинству проверок (right_answers)> / <общее кол-во проверок (num_of_checks)> * 100 (тк в процентах).
+    # При этом может быть такое, что работы проверены по разному, но оба варианта считаются за правильные, тк одинаковое кол-во людей "проголосовало" за разные ответы.
+
+    all_users_num_of_checks = [users[key][2] for key in users]
     places = list(set(all_users_num_of_checks))[::-1]
     places = {places[i]: i+1 for i in range(len(places))} # {num_of_checks: place}
 
@@ -274,11 +286,14 @@ def process_updates(form, date, session_id):
     }
     return test_updates
 
-def get_best_answers(_id):
+def get_most_answers(_id):
+
+    # возвращает ответы на проверку конкретной работы, составленные мнением большинства
+
     answer_data = answers.find_one({'_id': _id})
     checks_main = answer_data['personal'][1:]
     checks_updates = answer_data['test_updates'][1:]
-    requested_manual_users = [req['session_id'] for req in answer_data['requested_manual']]     # not to count checks with requested manual
+    requested_manual_users = [req['session_id'] for req in answer_data['requested_manual']]    # not to count checks with requested manual
     checks_main = [check for check in checks_main if check['session_id'] not in requested_manual_users]
     checks_updates = [check for check in checks_updates if check['session_id'] not in requested_manual_users]
 
@@ -307,7 +322,10 @@ def get_best_answers(_id):
 
     return answers_by_checks
 
-def check_if_correct(answers_by_checks, personal, test_updates):
+def check_if_valid(answers_by_checks, personal, test_updates):
+
+    # True если данная проверка соотвествует составленным в get_most_answers ответам большинства else False
+    
     personal['updates'] = test_updates['updates']
     for key in ['class', 'name', 'surname', 'patronymic', 'variant', 'type', 'updates']:
         if personal[key] not in answers_by_checks[key]:
@@ -362,7 +380,7 @@ def handle_data():
 
 
     if not requested_manual:
-        answers_by_checks = get_best_answers(_id)
+        answers_by_checks = get_most_answers(_id)
         updated_id = answers.update_one(
             {'_id': _id},
             {'$set': {'answers_by_checks': answers_by_checks}},
@@ -388,7 +406,7 @@ def handle_data():
             cur_user = leaderboard.find_one({'UUID': cur_user_id})
             all_answers = cur_user.get('all_answers', {})
             right_answers = cur_user.get('right_answers', 0)
-            if check_if_correct(answers_by_checks, cur_personal, cur_updates):
+            if check_if_valid(answers_by_checks, cur_personal, cur_updates):
                 if not all_answers.get(answer_id, False):
                     all_answers[answer_id] = True
                     right_answers += 1
