@@ -1,4 +1,3 @@
-print(1)
 from tkinter import *
 import PIL
 from PIL import Image, ImageDraw
