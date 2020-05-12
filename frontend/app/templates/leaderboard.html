@@ -9,7 +9,6 @@
 
     <!-- Optional CSS -->
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
-
     <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -24,6 +23,7 @@
     <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1 /jquery.min.js"></script>
 
  <div class="container">
     <div class="row">
@@ -48,45 +48,45 @@ target="blank">http://bradfrostweb.com/blog/post/float-label-pattern/</a></small
             <h2 align="center">Рейтинг Исполнителей</h2>
         </div>
 
-        <p style="align: bottom; margin-top: 1%; margin-left: 67%;"><img src={{ params.cur_user[1] }} alt="" align="top" height=33 width=33 class="img-thumbnail" style="margin: auto 10px;"></img><b>Ваш результат: {{ params.cur_user[2] }}</b></p>
+        <p style="align: bottom; margin-top: 1%; margin-left: 67%;"><img src={{ current_user.picture }} alt="" align="top" height=33 width=33 class="img-thumbnail" style="margin: auto 10px;"></img><b>Ваш результат: {{ params.cur_user_num_of_checks }}</b></p>
             
         
         <table class="table" style="width: 87%;">
             <colgroup>
                <col span="1" style="width: 20%;" align="center">
-               <col span="1" style="width: 60%;" align="center">
+               <col span="1" style="width: 40%;" align="center">
+               <col span="1" style="width: 20%;" align="center">
                <col span="1" style="width: 20%;" align="center">
             </colgroup>
             
             <thead class="thead-light">
             <tr align="center">
-              <th scope="col" align="center">Место</th>
-              <th scope="col" align="center">Электронная почта</th>
-              <th scope="col" align="center">Количество проверок</th>
+              <th scope="col" align="center" style="background-color: #363636"><font color="white">Место</font></th>
+              <th scope="col" align="center" style="background-color: #363636"><font color="white">Никнейм</font></th>
+              <th scope="col" align="center" style="background-color: #363636"><font color="white">Количество проверок</font></th>
+              <th scope="col" align="center" style="background-color: #363636"><font color="white">Согласованность</font></th>
             </tr>
           </thead>
           <tbody>
-            {% for place, picture, username, num_of_tasks in params.leaderboard_data %}
-            <tr align="center" {% if place == 1 %} bgcolor="#ffe033"
-                {% else %} {% if place == 2 %} bgcolor="#d9d9d9"
-                {% else %} {% if place == 3 %} bgcolor="#d6985a"
-                {% else %} bgcolor="#f5f5f5" 
-                {% endif %}{% endif %}{% endif %}>
+            {% for place, username, picture, num_of_checks, agreement in params.leaderboard_data %}
+            <tr align="center" {% if place == 1 %} bgcolor="#ffd700"
+                {% elif place == 2 %} bgcolor="#d9d9d9"
+                {% elif place == 3 %} bgcolor="#d98f45"
+                {% else %} bgcolor="#999999" 
+                {% endif %}>
               <th scope="row" align="center">{{ place }}</th>
               <td align="center"><img src={{ picture }} alt="" height=33 width=33 class="img-thumbnail" style="margin: auto 10px;"></img>{{ username }}</td>
-              <td align="center">{{ num_of_tasks }}</td>
+              <td align="center">{{ num_of_checks }}</td>
+              <td align="center">{{ agreement }}%</td>
             </tr>
             {% endfor %}
-            {% if params.clear == True %} 
-            <tr bgcolor="#f5f5f5">
-              <th scope="row"></th>
-              <td align="center"><b>Пока здесь пусто</b></td>
-              <td></td>
+            {% if params.leaderboard_data|length == 0 %} 
+            <tr bgcolor="#999999">
+              <td colspan="4" align='center'><b>Пока здесь пусто</b></td>
             </tr>
             {% endif %}
             <tr>
-              <th scope="row"></th>
-              <td align="right"><b>Всего:</b></td>
+              <td align="right" colspan="3"><b>Всего:</b></td>
               <td align="center">{{ params.total }}</td>
             </tr>
           </tbody>

@@ -1,5 +1,6 @@
-flask
-flask_login
-flask_pymongo
-xlsxwriter
-Flask-OAuthlib
+flask==1.1.1
+flask_login==0.4.1
+flask_pymongo==2.3.0
+xlsxwriter==1.2.1
+Flask-OAuthlib==0.9.5
+Werkzeug==0.15.5

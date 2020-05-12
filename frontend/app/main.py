@@ -8,6 +8,9 @@ import random
 import errno
 import logging
 
+from collections import Counter
+from ast import literal_eval
+
 from flask import (
     Flask, request,
     send_from_directory,
@@ -67,7 +70,7 @@ google = oauth.remote_app(
     consumer_key=app.config.get('GOOGLE_ID'),
     consumer_secret=app.config.get('GOOGLE_SECRET'),
     request_token_params={
-        'scope': 'email'
+        'scope': ['profile','email']
     },
     base_url='https://www.googleapis.com/oauth2/v1/',
     request_token_url=None,
@@ -80,16 +83,16 @@ google = oauth.remote_app(
 # silly user model
 class User(UserMixin):
 
-    def __init__(self, id, email=None, picture=None):
-        self.id = email
-        self.name = email
-        self.password = self.name + "_secret"
+    def __init__(self, id, name=None, email=None, picture=None):
+        self.id = id
+        self.name = name
         self.email = email
+        self.password = self.email + "_secret"
         self.picture = picture
         self.session_id = id #this will be deprecated
 
     def __repr__(self):
-        return "%d/%s/%s" % (self.id, self.name, self.password)
+        return "%s/%s/%s" % (self.id, self.name, self.password)
 
 
 def allowed_file(filename):
@@ -148,36 +151,31 @@ def send_static(path):
 @app.route('/leaderboard.html')
 @fresh_login_required
 def serve_leaderboard():
-    users = leaderboard.find({}, {'picture': 1, 'email': 1, 'num_of_checks': 1})
-    users = [tuple(user.values())[1:] for user in users]
-    users = sorted(users, key=lambda x: x[2], reverse=True)
+    users = {
+        user['email']: [
+            user['name'], user['picture'], 
+            user['num_of_checks'], 
+            round(user['right_answers']/user['num_of_checks']*100, 1)
+        ]
+        for user in sorted(leaderboard.find({}, {'_id': 0, 'UUID': 0, 'all_answers': 0}), key=lambda x: [x['num_of_checks'], x['right_answers']], reverse=True)
+    } # {email: [name, picture, num_of_checks, agreement]}
+
+    # num_of_checks - кол-во проверок без подсчета отправленных на ручную проверку
+    # agreement - согласованность, подсчитанная так:
+    # Каждый раз, когда отправляется проверенная работа, обновляется набор правильных ответов на каждый из пунктов (класс, вариант, тип, ФИО) для этой работы,
+    # далее проходится по всем людям, которые проверяли эту работу, и у них обновляется/остается такой же соответствие/несоответствие с мнением большинства,
+    # где счетчик проверок, совпадающих с мнением большинства - right_answers,
+    # в итоге согласованность = <кол-во соответствующих большинству проверок (right_answers)> / <общее кол-во проверок (num_of_checks)> * 100 (тк в процентах).
+    # При этом может быть такое, что работы проверены по разному, но оба варианта считаются за правильные, тк одинаковое кол-во людей "проголосовало" за разные ответы.
+
+    all_users_num_of_checks = [users[key][2] for key in users]
+    places = list(set(all_users_num_of_checks))[::-1]
+    places = {places[i]: i+1 for i in range(len(places))} # {num_of_checks: place}
 
     params = {}
-    params['leaderboard_data'] = []
-    cur_user = False
-    place = 1
-    total = 0
-    if users:
-        flag = users[0][2]
-        for pair in users:
-            if pair[2] != flag:
-                place += 1
-                flag = pair[2]
-            if pair[1] == current_user.email:
-                cur_user = True
-                cur_user_data = [place, pair[0], pair[2]]
-
-            total += pair[2]
-            params['leaderboard_data'].append([place, pair[0], pair[1], pair[2]])
-
-    params['clear'] = not bool(users)
-    if cur_user:
-        params['cur_user'] = cur_user_data
-    else:
-        params['cur_user'] = ['', current_user.picture, 0]
-    print('clear')
-    print(params['clear'])
-    params['total'] = total
+    params['leaderboard_data'] = [[places[user[2]], *user] for user in users.values()] # [place, name, picture, num_of_checks, agreement]
+    params['total'] = sum(all_users_num_of_checks)
+    params['cur_user_num_of_checks'] = users.get(current_user.email, [0, 0, 0, 0])[2]
 
     return render_template('leaderboard.html', params=params)
 
@@ -288,6 +286,53 @@ def process_updates(form, date, session_id):
     }
     return test_updates
 
+def get_most_answers(_id):
+
+    # возвращает ответы на проверку конкретной работы, составленные мнением большинства
+
+    answer_data = answers.find_one({'_id': _id})
+    checks_main = answer_data['personal'][1:]
+    checks_updates = answer_data['test_updates'][1:]
+    requested_manual_users = [req['session_id'] for req in answer_data['requested_manual']]    # not to count checks with requested manual
+    checks_main = [check for check in checks_main if check['session_id'] not in requested_manual_users]
+    checks_updates = [check for check in checks_updates if check['session_id'] not in requested_manual_users]
+
+    answers_by_checks = {}
+    for key in ['class', 'name', 'surname', 'patronymic', 'variant', 'type']:
+        c = Counter([checks_main[i][key] for i in range(len(checks_main))])
+        max_ = max(list(c.values()))
+        best_answers = []
+        for key1, value in c.most_common():
+            if value == max_: best_answers.append(key1)
+            else: break
+
+        answers_by_checks[key] = best_answers
+    
+    updates = [checks_updates[i]['updates'] for i in range(len(checks_updates))]
+    updates = list(map(str, updates))
+    c = Counter(updates)
+    max_ = max(list(c.values()))
+    best_answers = []
+    for key1, value in c.most_common():
+        if value == max_: best_answers.append(key1)
+        else: break
+
+    best_answers = list(map(lambda x: literal_eval(x), best_answers))
+    answers_by_checks['updates'] = best_answers
+
+    return answers_by_checks
+
+def check_if_valid(answers_by_checks, personal, test_updates):
+
+    # True если данная проверка соотвествует составленным в get_most_answers ответам большинства else False
+    
+    personal['updates'] = test_updates['updates']
+    for key in ['class', 'name', 'surname', 'patronymic', 'variant', 'type', 'updates']:
+        if personal[key] not in answers_by_checks[key]:
+            return False
+    else:
+        return True
+
 
 @app.route('/process_form', methods=['POST'])
 def handle_data():
@@ -312,6 +357,7 @@ def handle_data():
                             'comment': form.get('message-text', "")}
     else:
         requested_manual = None
+
     test_updates = process_updates(form, date, session_id)
 
     to_bd = {
@@ -323,27 +369,57 @@ def handle_data():
     if requested_manual:
         to_bd['requested_manual'] = requested_manual
 
+    _id = ObjectId(answer_id)
     updated_id = answers.update_one(
-        {'_id': ObjectId(answer_id)},
+        {'_id': _id},
         {'$push': to_bd},
     )
     flash('Updated successfully, %s %s' % (updated_id.raw_result, updated_id.upserted_id))
 
-    updated_leaderboard__id = leaderboard.update_one(
-        {"email": current_user.email},
-        {"$inc": {"num_of_checks": 1}},
-    )
-    
-    if not updated_leaderboard__id.raw_result['updatedExisting']:
-        updated_leaderboard__id = leaderboard.insert_one({
-            "UUID": current_user.name,
-            'picture': current_user.picture,
-            "email": current_user.email,
-            "num_of_checks": 1
-        })
-
     # flash(jsonify(dict(form=form, personal=personal, updates=updates, requested_manual=requested_manual)))
 
+
+    if not requested_manual:
+        answers_by_checks = get_most_answers(_id)
+        updated_id = answers.update_one(
+            {'_id': _id},
+            {'$set': {'answers_by_checks': answers_by_checks}},
+        )
+
+        updated_leaderboard__id = leaderboard.update_one(
+            {"UUID": current_user.get_id()},
+            {"$set": {"UUID": current_user.get_id(),
+                      "email": current_user.email,
+                      "name": current_user.name,
+                      "picture": current_user.picture},
+            "$inc": {"num_of_checks": 1}},
+            upsert=True
+        )
+
+        answer = answers.find_one({'_id': _id})
+        personals = answer['personal']
+        test_updates = answer['test_updates']
+        for i in range(1, len(personals)):
+            cur_personal = personals[i]
+            cur_updates = test_updates[i]
+            cur_user_id = cur_personal['session_id']
+            cur_user = leaderboard.find_one({'UUID': cur_user_id})
+            all_answers = cur_user.get('all_answers', {})
+            right_answers = cur_user.get('right_answers', 0)
+            if check_if_valid(answers_by_checks, cur_personal, cur_updates):
+                if not all_answers.get(answer_id, False):
+                    all_answers[answer_id] = True
+                    right_answers += 1
+            else:
+                if all_answers.get(answer_id, False):
+                    all_answers[answer_id] = False
+                    right_answers -= 1
+            
+            updated_leaderboard__id = leaderboard.update_one(
+                {"UUID": cur_user_id},
+                {"$set": {"right_answers": right_answers,
+                        "all_answers": all_answers}})
+        
     # When ready for production
     return redirect(url_for('serve_form'), code=303)
 
@@ -401,7 +477,7 @@ def authorized():
     resp = google.authorized_response()
     session['google_token'] = (resp['access_token'], '')
     me = google.get('userinfo')
-    user = User(str(uuid.uuid1())[:8], me.data["email"], me.data["picture"])
+    user = User(str(uuid.uuid1())[:8], me.data['name'], me.data["email"], me.data["picture"])
     login_user(user, remember=True)
 
     #return jsonify({"data": session.get('google_token'), "resp": resp, "medata": me.data})
@@ -420,7 +496,7 @@ def load_user(userid):
     # this will logout user if he logouts his Google account
     try:
         me = google.get('userinfo')
-        return User(userid, me.data['email'], me.data['picture'])
+        return User(userid, me.data['name'], me.data['email'], me.data['picture'])
     except Exception as e:
         return None
 
