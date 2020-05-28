@@ -131,6 +131,7 @@ def main(args):
             result['img_fio'] = img_fio
             logger.debug(f"Task _id={task['_id']} :: {task['i']} :: predict(cropped)")
             predictions = predict(cropped)
+            cropped.set_predictions(predictions)
             logger.debug(f"Task _id={task['_id']} :: {task['i']} :: cropped.plot_predicted(predictions)")
             inpainted = cropped.plot_predicted(predictions, only_answers=True)
             img_test_form = os.path.join(args.save_path, f"{task['UUID']}__{task['i']}_test_form.jpg")
@@ -144,8 +145,9 @@ def main(args):
                     cropped.get_labels(),
                     predictions
             ):
-                if pred:
+                if pred == cropped.tag_answer:
                     test_results[str(j)] += letter
+            test_updates[0]['updates'] = cropped.get_dict_with_corrections()
             logger.info(f"Task _id={task['_id']} :: {task['i']} :: status :: normal")
             result.update(status='normal')
             task['result'] = result

@@ -133,6 +133,8 @@ UPDATES = tuple(range(41, 53))
 WIDTH = 3000
 HEIGHT = int(WIDTH * 578 / 403)
 Box = collections.namedtuple("Box", "center,delta,angle")
+TAG_ANSWER = 11
+TAG_EMPTY = 10
 
 
 def box_to_slice(box):
@@ -371,10 +373,78 @@ class CroppedAnswers(object):
             recognized = recognized[self.ANSWERS_BOX]
         return recognized
 
+    def set_predictions(self, predictions):
+        self.predictions = predictions
+
+    @staticmethod
+    def is_digit(prediction: int) -> bool:
+        return prediction != TAG_ANSWER and prediction != TAG_EMPTY
+
+    def get_number_task(self, decades: int, units: int) -> int:
+        res = 0
+        if self.is_digit(units[0]):
+            res += units[0]
+            if self.is_digit(decades[0]):
+                res += decades[0] * 10
+        else:
+            if self.is_digit(decades[0]):
+                return decades[0]
+            else:
+                return -1
+        return res
+
+    def get_all_numbers_tasks(self) -> list:
+        updates_number = []
+        for i in range(len(QUESTIONS) * len(LABELS),
+                       len(QUESTIONS) * len(LABELS)
+                       + len(LABELS_UPDATES) * len(UPDATES),
+                       len(LABELS_UPDATES)):
+            updates_number.append(i)
+
+        keys = []
+        counter = 0
+        second_column = len(updates_number) // 2 + 1
+        # first row from the left side then first row from the right side
+        for i in updates_number:
+            curr_number = self.get_number_task(
+                self.predictions[i], self.predictions[i + 1])
+            if counter % 2 == 0:
+                keys.append((counter // 2 + len(QUESTIONS) + 1, curr_number))
+            else:
+                keys.append((second_column + len(QUESTIONS), curr_number))
+                second_column += 1
+            counter += 1
+        return sorted(keys, key=lambda x: x[0])
+
+    def get_dict_with_corrections(self):
+        keys = self.get_all_numbers_tasks()
+        test_updates = dict.fromkeys(list(map(str, sorted(list(zip(*keys))[1]))), '')
+        for (j, letter), pred in zip(
+                self.get_labels(),
+                self.predictions
+        ):
+            if len(QUESTIONS) < j < len(QUESTIONS) + len(UPDATES) + 1:
+                if pred == TAG_ANSWER:
+                    test_updates[str(keys[j - len(QUESTIONS) - 1][1])] += letter
+
+        # remove key '-1' because the task with such number doesn't exist
+        # this key appears if the number of updates != max possible
+        test_updates.pop('-1', None)
+        return test_updates
+
     PERSONAL_BOX = (slice(20, 1100), slice(45, 3000))
     ANSWERS_BOX = (slice(1150, -200), slice(45, 3000))
     MATH_CHECKBOX = (slice(780, 870), slice(490, 570))
     OT_CHECKBOX = (slice(780, 870), slice(1220, 1300))
+    predictions = []
+
+    @property
+    def tag_answer(self):
+        return TAG_ANSWER
+
+    @property
+    def tag_empty(self):
+        return TAG_EMPTY
 
     @property
     def personal(self):
