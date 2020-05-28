@@ -39,9 +39,42 @@ else:
         list(map(int, os.environ["FEMIDA_OCR_BORDER_LEFT"].split(",")))
     )
 
+if "FEMIDA_OCR_UPDATES_BORDER_LEFT" not in os.environ:
+    BORDER_UPDATES_LEFT = np.array(
+        [
+            485,
+            593,
+            715,
+            838,
+            960,
+            1080,
+            1200,
+            1560,
+            1663,
+            1783,
+            1906,
+            2030,
+            2145,
+            2270,
+        ]
+    )
+else:
+    BORDER_UPDATES_LEFT = np.array(
+        list(map(int, os.environ["FEMIDA_OCR_UPDATES_BORDER_LEFT"].split(",")))
+    )
+
+if "FEMIDA_OCR_VARIANT_BORDER_LEFT" not in os.environ:
+    BORDER_VARIANT_LEFT = np.array([450, 565, 687, 810, 937])
+else:
+    BORDER_VARIANT_LEFT = np.array(
+        list(map(int, os.environ["FEMIDA_OCR_VARIANT_BORDER_LEFT"].split(",")))
+    )
+
 MARGIN_HORIZONTAL = int(os.environ.get("FEMIDA_OCR_MARGIN_HORIZONTAL", 84))
 
 BORDER_RIGHT = BORDER_LEFT + MARGIN_HORIZONTAL
+BORDER_UPDATES_RIGHT = BORDER_UPDATES_LEFT + MARGIN_HORIZONTAL
+BORDER_VARIANT_RIGHT = BORDER_VARIANT_LEFT + MARGIN_HORIZONTAL
 
 if "FEMIDA_OCR_BORDER_TOP" not in os.environ:
     BORDER_TOP = np.array([1322, 1450, 1580, 1715, 1843, 2087, 2217, 2349, 2479, 2610])
@@ -50,9 +83,25 @@ else:
         list(map(int, os.environ["FEMIDA_OCR_BORDER_TOP"].split(",")))
     )
 
+if "FEMIDA_OCR_UPDATES_BORDER_TOP" not in os.environ:
+    BORDER_UPDATES_TOP = np.array([3235, 3359, 3479, 3600, 3719, 3841])
+else:
+    BORDER_UPDATES_TOP = np.array(
+        list(map(int, os.environ["FEMIDA_OCR_UPDATES_BORDER_TOP"].split(",")))
+    )
+
+if "FEMIDA_OCR_VARIANT_BORDER_TOP" not in os.environ:
+    BORDER_VARIANT_TOP = np.array([958])
+else:
+    BORDER_VARIANT_TOP = np.array(
+        list(map(int, os.environ["FEMIDA_OCR_VARIANT_BORDER_TOP"].split(",")))
+    )
+
 MARGIN_VERTICAL = int(os.environ.get("FEMIDA_OCR_MARGIN_VERTICAL", 83))
 
 BORDER_BOTTOM = BORDER_TOP + MARGIN_VERTICAL
+BORDER_UPDATES_BOTTOM = BORDER_UPDATES_TOP + MARGIN_VERTICAL
+BORDER_VARIANT_BOTTOM = BORDER_VARIANT_TOP + MARGIN_VERTICAL
 
 TOP_BLACK_LINE_POSITIONS = (1225, 1275)
 TOP_BLACK_LINE_LEFT_RIGHT = 400
@@ -77,7 +126,10 @@ def need_flip(image):
 
 
 LABELS = ("A", "B", "C", "D", "E")
+LABELS_UPDATES = ("FIRST", "SECOND", "A", "B", "C", "D", "E")
+VARIANT_DIGITS = tuple(range(53, 59))
 QUESTIONS = tuple(range(1, 41))
+UPDATES = tuple(range(41, 53))
 WIDTH = 3000
 HEIGHT = int(WIDTH * 578 / 403)
 Box = collections.namedtuple("Box", "center,delta,angle")
@@ -105,6 +157,31 @@ def _get_small_rectangles_positions_middle():
         question = QUESTIONS[j + (len(QUESTIONS) // 2) * (i // len(LABELS))]
         label = labels[i % len(LABELS)]
         box = (question, label), Box((xc[i, j], yc[i, j]), (dx[i, j], dy[i, j]), 0.0)
+        result.append(box)
+
+    xl, yt = np.meshgrid(BORDER_UPDATES_LEFT, BORDER_UPDATES_TOP)
+    xr, yb = np.meshgrid(BORDER_UPDATES_RIGHT, BORDER_UPDATES_BOTTOM)
+    xc, yc = (xl + xr) / 2, (yt + yb) / 2
+    dx, dy = (xl - xr), (yb - yt)
+    labels = LABELS_UPDATES
+    # horizontal checking for updates (first number, second number, 5 answer choices)
+    for i, j in itertools.product(range(xc.shape[0]), range(xc.shape[1])):
+        # add (xc.shape[0]) if works with the right side of updates
+        mistake = UPDATES[i + (j >= xc.shape[1] // 2) * (xc.shape[0])]
+        label = labels[j % len(LABELS_UPDATES)]
+        box = (mistake, label), Box((xc[i, j], yc[i, j]), (dx[i, j], dy[i, j]), 0.0)
+        result.append(box)
+
+    xl, yt = np.meshgrid(BORDER_VARIANT_LEFT, BORDER_VARIANT_TOP)
+    xr, yb = np.meshgrid(BORDER_VARIANT_RIGHT, BORDER_VARIANT_BOTTOM)
+    xc, yc = (xl + xr) / 2, (yt + yb) / 2
+    dx, dy = (xl - xr), (yb - yt)
+    # horizontal checking for variant
+    for i, j in itertools.product(range(xc.shape[0]), range(xc.shape[1])):
+        # only one row
+        variant = VARIANT_DIGITS[j]
+        label = 0
+        box = (variant, label), Box((xc[i, j], yc[i, j]), (dx[i, j], dy[i, j]), 0.0)
         result.append(box)
     return tuple(result)
 
