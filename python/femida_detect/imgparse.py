@@ -418,7 +418,7 @@ class CroppedAnswers(object):
 
     def get_dict_with_corrections(self):
         keys = self.get_all_numbers_tasks()
-        test_updates = dict.fromkeys(list(map(str, sorted(list(zip(*keys))[1]))), '')
+        test_updates = dict.fromkeys(list(map(str, list(zip(*keys))[1])), '')
         for (j, letter), pred in zip(
                 self.get_labels(),
                 self.predictions

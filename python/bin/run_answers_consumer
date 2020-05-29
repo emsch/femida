@@ -10,7 +10,6 @@ import pymongo
 import pymongo.errors
 import femida_detect
 
-
 parser = argparse.ArgumentParser()
 ANSWERS = 'answers'
 PDFS = 'pdfs'
@@ -104,14 +103,14 @@ def main(args):
             _, class_, type_, variant = pdf_comment.split('_')
 
             if type_ == '\u041e\u0422':
-                type_ = 'ot'  
+                type_ = 'ot'
             else:
                 type_ = 'mat'
 
             result = dict(
                 page=task['i'],
                 personal=[{'class': class_,
-                          'type': type_}],
+                           'type': type_}],
                 UUID=task['UUID'],
                 requested_manual=[],
                 manual_checks=[],
@@ -141,13 +140,22 @@ def main(args):
                 cv2.resize(inpainted, (1000, 1000 * h // w))
             )
             result['img_test_form'] = img_test_form
-            for (j, letter), pred in zip(
-                    cropped.get_labels(),
-                    predictions
-            ):
-                if pred == cropped.tag_answer:
-                    test_results[str(j)] += letter
-            test_updates[0]['updates'] = cropped.get_dict_with_corrections()
+            if (([cropped.tag_answer] in predictions) or
+                    ([cropped.tag_empty] in predictions)):
+                for (j, letter), pred in zip(
+                        cropped.get_labels(),
+                        predictions
+                ):
+                    if pred == cropped.tag_answer:
+                        test_results[str(j)] += letter
+                test_updates[0]['updates'] = cropped.get_dict_with_corrections()
+            else:
+                for (j, letter), pred in zip(
+                        cropped.get_labels(),
+                        predictions
+                ):
+                    if pred:
+                        test_results[str(j)] += letter
             logger.info(f"Task _id={task['_id']} :: {task['i']} :: status :: normal")
             result.update(status='normal')
             task['result'] = result
