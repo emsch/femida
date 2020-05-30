@@ -146,7 +146,8 @@ def main(args):
                         cropped.get_labels(),
                         predictions
                 ):
-                    if pred == cropped.tag_answer:
+                    if (pred == cropped.tag_answer and
+                            j <= cropped.number_questions):
                         test_results[str(j)] += letter
                 test_updates[0]['updates'] = cropped.get_dict_with_corrections()
             else:

@@ -439,6 +439,10 @@ class CroppedAnswers(object):
     predictions = []
 
     @property
+    def number_questions(self):
+        return len(QUESTIONS)
+
+    @property
     def tag_answer(self):
         return TAG_ANSWER
 
