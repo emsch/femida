@@ -12,3 +12,4 @@ COPY nginx/femida.conf.template /etc/nginx/conf.d/nginx.conf.template
 COPY nginx/ssl.conf /etc/nginx/ssl.conf
 COPY nginx/drop.conf /etc/nginx/drop.conf
 EXPOSE 80 443
+

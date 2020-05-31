@@ -1,5 +1,11 @@
 version: '3'
 
+networks:
+  web:
+    external: true
+  internal:
+    external: false
+
 services:
   mongodb:
     image: mongo:latest
@@ -8,6 +14,10 @@ services:
       - data:/data/db
       - ./mongo/mongod.conf:/etc/mongo/mongod.conf
     command: mongod --config /etc/mongo/mongod.conf
+    networks:
+      - internal
+    labels:
+      - traefik.enable=false
 
   mongo-express:
     image: mongo-express
@@ -22,6 +32,13 @@ services:
       - 8081:8081
     depends_on:
       - mongodb
+    networks:
+      - internal
+      - web
+    labels:
+      - traefik.backend=mongo-express
+      - "traefik.frontend.rule=Host:femida.emsch.ru;PathPrefix:/mongo"
+      - traefik.docker.network=web
 
   frontend:
     build:
@@ -34,13 +51,22 @@ services:
       - secret
     depends_on:
       - mongodb
-    ports:
-      - 80:80
-      - 443:443
+    # ports:
+    #  - 80
+    #  - 80:80
+    #  - 443:443
     volumes:
       - media:/media/
       - ./databases/:/app/databases/
       - ./ssl/:/etc/nginx/ssl/
+    networks:
+      - internal
+      - web
+    labels:
+      - traefik.backend=femida
+      - traefik.frontend.rule=Host:femida.emsch.ru
+      - traefik.docker.network=web
+      - traefik.port=80
 
   ocr_producer:
     build:
@@ -54,6 +80,10 @@ services:
     command: run_producer --root=/var/femida_detect --scan-first --host=mongodb
     depends_on:
       - mongodb
+    networks:
+      - internal
+    labels:
+      - traefik.enable=false
 
   pdf_consumer:
     build:
@@ -67,6 +97,10 @@ services:
     command: run_pdf_consumer --root=/var/femida_detect --host=mongodb
     depends_on:
       - ocr_producer
+    networks:
+      - internal
+    labels:
+      - traefik.enable=false
 
   answers_consumer:
     build:
@@ -81,6 +115,10 @@ services:
     command: run_answers_consumer --root=/var/femida_detect --host=mongodb --model-path=/model/model.t7
     depends_on:
       - pdf_consumer
+    networks:
+      - internal
+    labels:
+      - traefik.enable=false
 
   status_updater:
     build:
@@ -93,6 +131,10 @@ services:
     command: run_status_updater --root=/var/femida_detect --host=mongodb
     depends_on:
     - answers_consumer
+    networks:
+      - internal
+    labels:
+      - traefik.enable=false
 
 volumes:
   data:

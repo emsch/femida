@@ -29,9 +29,9 @@ server {
         uwsgi_pass unix:///tmp/uwsgi.sock;
     }
 
-    location /mongo {
-		proxy_pass		http://mongo-express:8081;
-		proxy_set_header	Host		$host;
-		proxy_set_header	X-Real_IP	$remote_addr;
-	}
+#   location /mongo {
+#		proxy_pass		http://mongo-express:8081;
+#		proxy_set_header	Host		$host;
+#		proxy_set_header	X-Real_IP	$remote_addr;
+#	}
 }
