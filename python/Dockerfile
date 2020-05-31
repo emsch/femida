@@ -10,7 +10,7 @@ COPY requirements-dev.txt /tmp/requirements-dev.txt
 RUN pip install --upgrade pip && \
     pip install --no-cache-dir -U \
     -r /tmp/requirements.txt \
-    -r /tmp/requirements-dev.txt Pillow && \
+    -r /tmp/requirements-dev.txt && \
     sudo rm /tmp/requirements.txt && \
     sudo rm /tmp/requirements-dev.txt
 VOLUME /var/femida_detect
