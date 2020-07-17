@@ -116,7 +116,9 @@ def main(args):
                 requested_manual=[],
                 manual_checks=[],
                 test_results=test_results,
-                test_updates=test_updates
+                test_updates=test_updates,
+                answers_by_checks={'class': [class_], 'name': [''], 'surname': [''], 'patronymic': [''],
+                                   'variant': [''], 'type': [type_], 'updates': [{}]} 
             )
             logger.debug(f"Task _id={task['_id']} :: {task['i']} :: CroppedAnswers.from_raw")
             cropped = femida_detect.imgparse.CroppedAnswers.from_raw(image)

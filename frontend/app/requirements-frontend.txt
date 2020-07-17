@@ -1,6 +1,8 @@
 flask==1.1.1
 flask_login==0.4.1
 flask_pymongo==2.3.0
+flask_oauthlib==0.9.5
+flask_excel==0.0.7
 xlsxwriter==1.2.1
-Flask-OAuthlib==0.9.5
-Werkzeug==0.15.5
+werkzeug==0.15.5
+pyexcel-xls==0.5.8
