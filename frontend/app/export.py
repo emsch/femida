@@ -18,6 +18,7 @@ mod_export = Blueprint('export', __name__)
 from database import mongo  # noqa
 pdfs = mongo.db.pdfs
 answers = mongo.db.answers
+test_answers = mongo.db.test_answers
 
 class Col:
     def __init__(self, start_from=0):
@@ -86,15 +87,15 @@ class Question:
 
 def lower_without_nonalpha(lines):
     reg = re.compile('[^a-zа-я]')
-    print([reg.sub('', line.lower()) for line in lines])
     return [reg.sub('', line.lower()) for line in lines]
 
-def fill_sheet(worksheet, row, col, nums_quests, person, type_):
-    for field in ['status', 'variant', 'requested_manual', 'manual_checks', 'img_test_form', 'img_fio', 'UUID']:
+def fill_sheet(worksheet, row, col, nums_quests, person, type_, header_type, end_type):
+    for field in header_type:
         worksheet.write(row, col(), *person[type_][field])
     for i in range(1, nums_quests[type_]+1):
         worksheet.write(row, col(), *person[type_][str(i)])
-    worksheet.write(row, col(), *person[type_]['raw_json'])
+    for field in end_type:
+        worksheet.write(row, col(), *person[type_][field])
     return worksheet
 
 @mod_export.route('/export')
@@ -109,19 +110,22 @@ def export():
     bold = workbook.add_format({'bold': True})
     
     header = ["№", "surname", "name", "patronymic", "class"]
-    header_type = ["status", "variant", "requested_manual", "manual_checks", "img_test_form",
+    header_type = ["status", "real_variant", "requested_manual", "manual_checks", "img_test_form",
                    "img_fio", "UUID"]
+    end_type = ["right_answers_num", "raw_json"]
+
     nums_quests = {'mat': 30, 'ot': 40}
     type_start_col = {}
     type_start_col['mat'] = len(header)
-    type_start_col['ot'] = type_start_col['mat'] + len(header_type) + nums_quests['mat'] + 1 # +1 by "raw_json"
-    
-    for type_ in ['mat', 'ot']:
-        header.extend([f'{field}_{type_}' for field in header_type])
-        header.extend([str(i) for i in range(1, nums_quests[type_] + 1)])
-        header.append(f'raw_json_{type_}')
+    type_start_col['ot'] = type_start_col['mat'] + len(header_type) + nums_quests['mat'] + len(end_type)
 
-    for i, v in enumerate(header):
+    labels = header.copy()
+    for type_ in ['mat', 'ot']:
+        labels.extend([f'{field}_{type_}' for field in header_type])
+        labels.extend([str(i) for i in range(1, nums_quests[type_] + 1)])
+        labels.extend([f'{field}_{type_}' for field in end_type])
+
+    for i, v in enumerate(labels):
         worksheet.write(0, i, v, bold)
 
     all_people = {}
@@ -133,17 +137,21 @@ def export():
         try:
             spec_id = "{}_{}_{}_%s" % answers_by_checks['class'][-1]
             spec_id = spec_id.format(*lower_without_nonalpha([answers_by_checks['name'][-1], answers_by_checks['surname'][-1], answers_by_checks['patronymic'][-1]]))
-            print(spec_id)
             type_ = answers_by_checks['type'][-1]
             if  '___' in spec_id:
                 # fill document by anonymous users
                 worksheet.write(row, col(), row)
                 # ФИО
-                for field in ['surname', 'name', 'patronymic', 'class']:
+                for field in header[1:]:
                     worksheet.write(row, col(), answers_by_checks[field][-1])
                 col.i = type_start_col[type_]
                 worksheet.write(row, col(), r.get('status', ""))
-                worksheet.write(row, col(), answers_by_checks['variant'][-1])
+                variant = answers_by_checks['variant'][-1]
+                try:
+                    cur_test_answers = test_answers.find({'type': type_, 'variant': variant}, {'_id': 0, 'type': 0, 'variant': 0, 'real_variant': 0})[0]
+                except: 
+                    cur_test_answers = None
+                worksheet.write(row, col(), variant[-2:])
                 # cnt
                 requested_manual = len(r.get('requested_manual', 0))
                 if requested_manual > 0:
@@ -157,17 +165,16 @@ def export():
                 worksheet.write(row, col(), 'http://femida.emsch.ru' + r.get('img_fio', ""))
                 worksheet.write(row, col(), r.get('UUID', ""))
                 # answers
-                start = col.current()
+                right_answers_num = 0
                 for q in range(1, nums_quests[type_]+1):
                     question = Question(
                         q, r.get('test_results', {}).get(str(q), ""), "F",
                         yellow, red
                     )
-                    for update in r.get('test_updates', []):
-                        if str(q) in update['updates']:
-                            question.update(update['updates'][str(q)])
-                    worksheet.write(row, start+q-1, *question.get_res_style())
-                    col()
+                    ans, style = question.get_res_style()
+                    if cur_test_answers and ans == cur_test_answers[str(q)]: right_answers_num += 1
+                    worksheet.write(row, col(), ans, style)
+                worksheet.write(row, col(), right_answers_num if cur_test_answers else '-')
                 worksheet.write(row, col(), json.dumps(r, default=json_util.default))
                 row += 1
             else:
@@ -178,7 +185,11 @@ def export():
                         question = Question(field, most_common_answer=answers_by_checks[field][-1], yellow=yellow, red=red)
                         for personal in personals:
                             question.update(personal.get(field, ""))
-                        all_people[spec_id]['main' if field != 'variant' else type_][field] = list(question.get_res_style())
+                        res_style = question.get_res_style()
+                        if field != 'variant':
+                            all_people[spec_id]['main'][field] = res_style
+                        else:
+                            all_people[spec_id][type_]['real_variant'] = res_style[0][-2:], res_style[1]
                 else:
                     for field in ['surname', 'name', 'patronymic', 'class', 'variant']:
                         question = Question(field, most_common_answer=answers_by_checks[field][-1], yellow=yellow, red=red)
@@ -191,7 +202,8 @@ def export():
                             elif all_people[spec_id]['main'][field][1] == yellow or res_style[1] == yellow:
                                 all_people[spec_id]['main'][field][1] = yellow
                         else:
-                            all_people[spec_id][type_][field] = res_style
+                            all_people[spec_id][type_]['real_variant'] = res_style[0][-2:], res_style[1]
+                cur_test_answers = test_answers.find({'type': type_, 'real_variant': all_people[spec_id][type_]['real_variant'][0]}, {'_id': 0, 'type': 0, 'real_variant': 0, 'variant': 0})[0]
                 # cnt
                 all_people[spec_id][type_]['status'] = r.get('status', ''), None
                 requested_manual = len(r.get('requested_manual', 0))
@@ -205,7 +217,7 @@ def export():
                 all_people[spec_id][type_]['img_fio'] = 'http://femida.emsch.ru' + r.get('img_fio', ""), None
                 all_people[spec_id][type_]['UUID'] = r.get('UUID', ""), None
                 # answers
-                start = col.current()
+                right_answers_num = 0
                 for q in range(1, nums_quests[type_]+1):
                     question = Question(
                         q, r.get('test_results', {}).get(str(q), ""), "F",
@@ -213,10 +225,16 @@ def export():
                     )
                     for update in r.get('test_updates', []):
                         if str(q) in update['updates']:
-                            question.update(update['updates'][str(q)])
-                    all_people[spec_id][type_][str(q)] = question.get_res_style()
+                            cur_update = update['updates'][str(q)]
+                            question.update(cur_update)
+                            question.most_common_answer = cur_update
+                    ans, style = question.get_res_style()
+                    if cur_test_answers and ans == cur_test_answers[str(q)]: right_answers_num += 1
+                    all_people[spec_id][type_][str(q)] = (ans, style)
                     col()
+                all_people[spec_id][type_]['right_answers_num'] = (right_answers_num, None) if cur_test_answers else '-'
                 all_people[spec_id][type_]['raw_json'] = json.dumps(r, default=json_util.default), None
+                
         except Exception as e:
             worksheet.write(1+row, 0, 'ERROR OCCURED: ' + str(e))
     
@@ -224,13 +242,13 @@ def export():
     for person in all_people.values():
         col = Col()
         worksheet.write(row, col(), row)
-        for field in ['surname', 'name', 'patronymic', 'class']:
+        for field in header[1:]:
             worksheet.write(row, col(), *person['main'][field])
         if person['mat']:
-            worksheet = fill_sheet(worksheet, row, col, nums_quests, person, 'mat')
+            worksheet = fill_sheet(worksheet, row, col, nums_quests, person, 'mat', header_type, end_type)
         if person['ot']:
             col.i = type_start_col['ot']
-            worksheet = fill_sheet(worksheet, row, col, nums_quests, person, 'ot')
+            worksheet = fill_sheet(worksheet, row, col, nums_quests, person, 'ot', header_type, end_type)
         row += 1
 
     workbook.close()
