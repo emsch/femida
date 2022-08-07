@@ -27,6 +27,7 @@ from flask_login import (
     current_user
 )
 from flask_oauthlib.client import OAuth
+import flask_excel as excel
 import bson
 from bson.objectid import ObjectId
 from werkzeug.utils import secure_filename
@@ -58,12 +59,15 @@ mongo.init_app(app)
 pdfs = mongo.db.pdfs
 answers = mongo.db.answers
 leaderboard = mongo.db.leaderboard
+test_answers = mongo.db.test_answers
 
 # flask-login
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "login"
 
+#flask-excel
+excel.init_excel(app)
 
 google = oauth.remote_app(
     'google',
@@ -79,6 +83,8 @@ google = oauth.remote_app(
     authorize_url='https://accounts.google.com/o/oauth2/auth',
 )
 
+LABELS = ("A", "B", "C", "D", "E")
+NUM_QUESTS = {'mat': 30, 'ot': 40}
 
 # silly user model
 class User(UserMixin):
@@ -122,7 +128,6 @@ def update_runtime_settings(**kwargs):
         {'_id': id_},
         {'$set': kwargs},
     )
-
 
 @app.route('/js/<path:path>')
 def send_js(path):
@@ -251,6 +256,19 @@ def serve_pdf():
     pattern = "([Пп][0-9]|[0-9]{%d,%d})_([89]|10|11|)_(ОТ|МАТ)_[0-9]{3,5}" % tuple(len_of_audience)
     params = {'pattern': pattern}
     return render_template('pdf.html', params=params)
+
+
+def get_enable_variants(type_):
+    return sorted([[elem['real_variant'], 'готово' if elem.get('1') else 'не готово'] for elem in test_answers.find({'type': type_}, {'_id': 0, 'type': 0, 'variant': 0})])
+
+@app.route("/enable_variants", methods=["GET"])
+def show_enable_variants():
+    return jsonify({'mat': get_enable_variants('mat'), 'ot': get_enable_variants('ot')})
+
+@app.route('/answers.html')
+@fresh_login_required
+def serve_answers():
+    return render_template('answers.html', params={'variants': get_enable_variants('mat')})
 
 
 def valid_form(form):
@@ -386,7 +404,15 @@ def handle_data():
             {'$set': {'answers_by_checks': answers_by_checks}},
         )
 
-        updated_leaderboard__id = leaderboard.update_one(
+        for type_ in answers_by_checks['type']:
+            for variant in answers_by_checks['variant']:
+                updated_right_answers_id = test_answers.update_one(
+                    {'type': type_, 'variant': variant},
+                    {'$set': {'type': type_, 'variant': variant, 'real_variant': variant[-2:]}},
+                    upsert=True
+                )
+
+        updated_leaderboard_id = leaderboard.update_one(
             {"UUID": current_user.get_id()},
             {"$set": {"UUID": current_user.get_id(),
                       "email": current_user.email,
@@ -415,7 +441,7 @@ def handle_data():
                     all_answers[answer_id] = False
                     right_answers -= 1
             
-            updated_leaderboard__id = leaderboard.update_one(
+            updated_leaderboard_id = leaderboard.update_one(
                 {"UUID": cur_user_id},
                 {"$set": {"right_answers": right_answers,
                         "all_answers": all_answers}})
@@ -465,12 +491,69 @@ def handle_pdf():
 
     return redirect(url_for('serve_pdf'))
 
+@app.route('/process_answers', methods=['POST'])
+def handle_answers():
+    # check if the post request has the file part
+    if 'file' not in request.files:
+        flash(u'ОШИБКА: нет файла')
+        return redirect(url_for('serve_answers'))
+
+    file = request.files['file']
+    filename = file.filename
+    # if user does not select file, browser also
+    # submit an empty part without filename
+    if filename == '':
+        flash(u'ОШИБКА: нет файла')
+        return redirect(url_for('serve_answers'))
+
+    allowed_extensions = ['xls', 'xlsx', 'xlsm']
+    normal_file = '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in allowed_extensions
+    if not file or not normal_file:
+        flash(u'ОШИБКА: неверное расширение у файла или название')
+        return redirect(url_for('serve_answers'))
+
+    try:
+        real_variant = request.form['real_variant']
+        type_ = request.form['type']
+    except:
+        flash(u'ОШИБКА: не выбран вариант')
+        return redirect(url_for('serve_answers'))
+
+    data = request.get_array(field_name='file')
+    cur_num_quests = NUM_QUESTS[type_] 
+    answers = [x[0].upper() for x in data[:cur_num_quests]]
+    if len(answers) != cur_num_quests:
+        flash(u'ОШИБКА: некорректные значения ответов')
+        return redirect(url_for('serve_answers'))
+    for ans in answers:
+        if ans not in LABELS:
+            flash(u'ОШИБКА: некорректные значения ответов')
+            return redirect(url_for('serve_answers'))
+    
+
+    filename = secure_filename(filename)
+    flash(u'Filename=%s' % filename)
+    flash(u'type=%s' % type_)
+    flash(u'real_variant=%s' % real_variant)
+    flash(u'Загрузка файла успешно осуществлена!')
+    flash(u'------------------------------------')
+
+    
+    updated_right_answers_id = test_answers.update_one(
+                    {'type': type_, 'real_variant': real_variant},
+                    {'$set': {str(i+1): answers[i] for i in range(cur_num_quests)}}
+                )
+
+    flash(u'Ответы на вариант {}_{} были добавлены.'.format(type_, real_variant))
+    flash(u'------------------------------------')
+
+    return redirect(url_for('serve_answers'))
 
 @app.route('/login')
 def login():
     session.pop('google_token', None)
     return google.authorize(callback=url_for('authorized', _external=True))
-
 
 @app.route('/login/authorized')
 def authorized():
