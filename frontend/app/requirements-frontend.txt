@@ -1,4 +1,4 @@
-flask==1.1.1
+flask==2.3.2
 flask_login==0.4.1
 flask_pymongo==2.3.0
 xlsxwriter==1.2.1
