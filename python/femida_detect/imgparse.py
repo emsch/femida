@@ -39,9 +39,42 @@ else:
         list(map(int, os.environ["FEMIDA_OCR_BORDER_LEFT"].split(",")))
     )
 
+if "FEMIDA_OCR_UPDATES_BORDER_LEFT" not in os.environ:
+    BORDER_UPDATES_LEFT = np.array(
+        [
+            485,
+            593,
+            715,
+            838,
+            960,
+            1080,
+            1200,
+            1560,
+            1663,
+            1783,
+            1906,
+            2030,
+            2145,
+            2270,
+        ]
+    )
+else:
+    BORDER_UPDATES_LEFT = np.array(
+        list(map(int, os.environ["FEMIDA_OCR_UPDATES_BORDER_LEFT"].split(",")))
+    )
+
+if "FEMIDA_OCR_VARIANT_BORDER_LEFT" not in os.environ:
+    BORDER_VARIANT_LEFT = np.array([450, 565, 687, 810, 937])
+else:
+    BORDER_VARIANT_LEFT = np.array(
+        list(map(int, os.environ["FEMIDA_OCR_VARIANT_BORDER_LEFT"].split(",")))
+    )
+
 MARGIN_HORIZONTAL = int(os.environ.get("FEMIDA_OCR_MARGIN_HORIZONTAL", 84))
 
 BORDER_RIGHT = BORDER_LEFT + MARGIN_HORIZONTAL
+BORDER_UPDATES_RIGHT = BORDER_UPDATES_LEFT + MARGIN_HORIZONTAL
+BORDER_VARIANT_RIGHT = BORDER_VARIANT_LEFT + MARGIN_HORIZONTAL
 
 if "FEMIDA_OCR_BORDER_TOP" not in os.environ:
     BORDER_TOP = np.array([1322, 1450, 1580, 1715, 1843, 2087, 2217, 2349, 2479, 2610])
@@ -50,9 +83,25 @@ else:
         list(map(int, os.environ["FEMIDA_OCR_BORDER_TOP"].split(",")))
     )
 
+if "FEMIDA_OCR_UPDATES_BORDER_TOP" not in os.environ:
+    BORDER_UPDATES_TOP = np.array([3235, 3359, 3479, 3600, 3719, 3841])
+else:
+    BORDER_UPDATES_TOP = np.array(
+        list(map(int, os.environ["FEMIDA_OCR_UPDATES_BORDER_TOP"].split(",")))
+    )
+
+if "FEMIDA_OCR_VARIANT_BORDER_TOP" not in os.environ:
+    BORDER_VARIANT_TOP = np.array([958])
+else:
+    BORDER_VARIANT_TOP = np.array(
+        list(map(int, os.environ["FEMIDA_OCR_VARIANT_BORDER_TOP"].split(",")))
+    )
+
 MARGIN_VERTICAL = int(os.environ.get("FEMIDA_OCR_MARGIN_VERTICAL", 83))
 
 BORDER_BOTTOM = BORDER_TOP + MARGIN_VERTICAL
+BORDER_UPDATES_BOTTOM = BORDER_UPDATES_TOP + MARGIN_VERTICAL
+BORDER_VARIANT_BOTTOM = BORDER_VARIANT_TOP + MARGIN_VERTICAL
 
 TOP_BLACK_LINE_POSITIONS = (1225, 1275)
 TOP_BLACK_LINE_LEFT_RIGHT = 400
@@ -77,10 +126,15 @@ def need_flip(image):
 
 
 LABELS = ("A", "B", "C", "D", "E")
+LABELS_UPDATES = ("FIRST", "SECOND", "A", "B", "C", "D", "E")
+VARIANT_DIGITS = tuple(range(53, 59))
 QUESTIONS = tuple(range(1, 41))
+UPDATES = tuple(range(41, 53))
 WIDTH = 3000
 HEIGHT = int(WIDTH * 578 / 403)
 Box = collections.namedtuple("Box", "center,delta,angle")
+TAG_ANSWER = 11
+TAG_EMPTY = 10
 
 
 def box_to_slice(box):
@@ -105,6 +159,31 @@ def _get_small_rectangles_positions_middle():
         question = QUESTIONS[j + (len(QUESTIONS) // 2) * (i // len(LABELS))]
         label = labels[i % len(LABELS)]
         box = (question, label), Box((xc[i, j], yc[i, j]), (dx[i, j], dy[i, j]), 0.0)
+        result.append(box)
+
+    xl, yt = np.meshgrid(BORDER_UPDATES_LEFT, BORDER_UPDATES_TOP)
+    xr, yb = np.meshgrid(BORDER_UPDATES_RIGHT, BORDER_UPDATES_BOTTOM)
+    xc, yc = (xl + xr) / 2, (yt + yb) / 2
+    dx, dy = (xl - xr), (yb - yt)
+    labels = LABELS_UPDATES
+    # horizontal checking for updates (first number, second number, 5 answer choices)
+    for i, j in itertools.product(range(xc.shape[0]), range(xc.shape[1])):
+        # add (xc.shape[0]) if works with the right side of updates
+        mistake = UPDATES[i + (j >= xc.shape[1] // 2) * (xc.shape[0])]
+        label = labels[j % len(LABELS_UPDATES)]
+        box = (mistake, label), Box((xc[i, j], yc[i, j]), (dx[i, j], dy[i, j]), 0.0)
+        result.append(box)
+
+    xl, yt = np.meshgrid(BORDER_VARIANT_LEFT, BORDER_VARIANT_TOP)
+    xr, yb = np.meshgrid(BORDER_VARIANT_RIGHT, BORDER_VARIANT_BOTTOM)
+    xc, yc = (xl + xr) / 2, (yt + yb) / 2
+    dx, dy = (xl - xr), (yb - yt)
+    # horizontal checking for variant
+    for i, j in itertools.product(range(xc.shape[0]), range(xc.shape[1])):
+        # only one row
+        variant = VARIANT_DIGITS[j]
+        label = 0
+        box = (variant, label), Box((xc[i, j], yc[i, j]), (dx[i, j], dy[i, j]), 0.0)
         result.append(box)
     return tuple(result)
 
@@ -294,10 +373,82 @@ class CroppedAnswers(object):
             recognized = recognized[self.ANSWERS_BOX]
         return recognized
 
+    def set_predictions(self, predictions):
+        self.predictions = predictions
+
+    @staticmethod
+    def is_digit(prediction: int) -> bool:
+        return prediction != TAG_ANSWER and prediction != TAG_EMPTY
+
+    def get_number_task(self, decades: int, units: int) -> int:
+        res = 0
+        if self.is_digit(units[0]):
+            res += units[0]
+            if self.is_digit(decades[0]):
+                res += decades[0] * 10
+        else:
+            if self.is_digit(decades[0]):
+                return decades[0]
+            else:
+                return -1
+        return res
+
+    def get_all_numbers_tasks(self) -> list:
+        updates_number = []
+        for i in range(len(QUESTIONS) * len(LABELS),
+                       len(QUESTIONS) * len(LABELS)
+                       + len(LABELS_UPDATES) * len(UPDATES),
+                       len(LABELS_UPDATES)):
+            updates_number.append(i)
+
+        keys = []
+        counter = 0
+        second_column = len(updates_number) // 2 + 1
+        # first row from the left side then first row from the right side
+        for i in updates_number:
+            curr_number = self.get_number_task(
+                self.predictions[i], self.predictions[i + 1])
+            if counter % 2 == 0:
+                keys.append((counter // 2 + len(QUESTIONS) + 1, curr_number))
+            else:
+                keys.append((second_column + len(QUESTIONS), curr_number))
+                second_column += 1
+            counter += 1
+        return sorted(keys, key=lambda x: x[0])
+
+    def get_dict_with_corrections(self):
+        keys = self.get_all_numbers_tasks()
+        test_updates = dict.fromkeys(list(map(str, list(zip(*keys))[1])), '')
+        for (j, letter), pred in zip(
+                self.get_labels(),
+                self.predictions
+        ):
+            if len(QUESTIONS) < j < len(QUESTIONS) + len(UPDATES) + 1:
+                if pred == TAG_ANSWER:
+                    test_updates[str(keys[j - len(QUESTIONS) - 1][1])] += letter
+
+        # remove key '-1' because the task with such number doesn't exist
+        # this key appears if the number of updates != max possible
+        test_updates.pop('-1', None)
+        return test_updates
+
     PERSONAL_BOX = (slice(20, 1100), slice(45, 3000))
     ANSWERS_BOX = (slice(1150, -200), slice(45, 3000))
     MATH_CHECKBOX = (slice(780, 870), slice(490, 570))
     OT_CHECKBOX = (slice(780, 870), slice(1220, 1300))
+    predictions = []
+
+    @property
+    def number_questions(self):
+        return len(QUESTIONS)
+
+    @property
+    def tag_answer(self):
+        return TAG_ANSWER
+
+    @property
+    def tag_empty(self):
+        return TAG_EMPTY
 
     @property
     def personal(self):
