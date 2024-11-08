@@ -116,3 +116,10 @@ results
 local.cfg
 python/tests/out/
 docker/
+
+
+research/digits_and_crosses_recognition/marked_boxes_examples/
+research/digits_and_crosses_recognition/paintings/
+research/digits_and_crosses_recognition/zero_and_marks/
+research/digits_and_crosses_recognition/our_sample_digits/
+research/digits_and_crosses_recognition/tasks_sample/
