@@ -20,16 +20,16 @@ services:
       - traefik.enable=false
 
   mongo-express:
-    image: mongo-express
+    image: mongo-express:0.54.0
     restart: always
     environment:
       - ME_CONFIG_MONGODB_SERVER=mongodb
       - ME_CONFIG_SITE_BASEURL=/mongo
+      - ME_CONFIG_BASICAUTH_USERNAME=femida
+      - ME_CONFIG_BASICAUTH_PASSWORD=${ME_CONFIG_BASICAUTH_PASSWORD}
     env_file:
       - envfile
       - secret
-    ports:
-      - 8081:8081
     depends_on:
       - mongodb
     networks:
@@ -44,6 +44,8 @@ services:
     build:
       context: frontend
     restart: always
+    ports:
+      - "0.0.0.0:8082:80"
     environment:
       - MONGO_HOST=mongodb
     env_file:
@@ -67,6 +69,9 @@ services:
       - traefik.frontend.rule=Host:femida.emsch.ru
       - traefik.docker.network=web
       - traefik.port=80
+      - traefik.http.routers.blog.rule=Host(`femida.emsch.ru`)
+      - traefik.http.routers.blog.tls=true
+      - traefik.http.routers.blog.tls.certresolver=lets-encrypt
 
   ocr_producer:
     build:

@@ -15,6 +15,7 @@ jobs:
           name: Start container and verify it's working
           command: |
             set -x
+            docker network create web
             docker-compose up -d
             # TODO test (curl) result
       # `deploy` step: identical to a `run` step, but uses only one container:
