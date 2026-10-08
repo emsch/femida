@@ -293,6 +293,7 @@ def process_updates(form, date, session_id):
 
 
 @app.route('/process_form', methods=['POST'])
+@fresh_login_required
 def handle_data():
     form = dict(request.form.items())
     if not valid_form(form):

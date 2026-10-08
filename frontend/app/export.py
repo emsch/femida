@@ -8,6 +8,7 @@ from flask import (
     Blueprint,
     send_file
 )
+from flask_login import fresh_login_required
 
 from bson import json_util
 from collections import Counter
@@ -85,6 +86,7 @@ class Question:
 
 
 @mod_export.route('/export')
+@fresh_login_required
 def export():
     output = BytesIO()
     # Create an new Excel file and add a worksheet.
