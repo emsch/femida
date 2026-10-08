@@ -116,3 +116,6 @@ results
 local.cfg
 python/tests/out/
 docker/
+
+# local stand: synthetic media written by local/seed
+local/media/
