@@ -298,6 +298,11 @@ def handle_data():
     if not valid_form(form):
         flash(u'ОШИБКА: неверное расширение у файла или название')
         return redirect(url_for('serve_form'))
+    status = form.get('status')
+    if status not in ('ok', 'manual'):
+        flash(u'ОШИБКА: форма пришла без кнопки «Отправить» или «Ручная проверка» '
+              u'(status=%r), ничего не сохранено' % status)
+        return redirect(url_for('serve_form'))
 
     date = datetime.datetime.utcnow()
     session_id = current_user.get_id()
@@ -310,7 +315,7 @@ def handle_data():
         "type": form.get('type', ''),
         'session_id': session_id, "date": date,
     }
-    if form['status'] == 'manual':
+    if status == 'manual':
         requested_manual = {'session_id': session_id, "date": date, 
                             'comment': form.get('message-text', "")}
     else:
