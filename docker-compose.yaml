@@ -45,7 +45,7 @@ services:
       context: frontend
     restart: always
     ports:
-      - "0.0.0.0:8082:80"
+      - "10.0.0.2:8082:80"
     environment:
       - MONGO_HOST=mongodb
     env_file:
