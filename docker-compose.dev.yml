@@ -1,0 +1,65 @@
+# Hosted dev stand: /femida-dev on German, served on the WireGuard address.
+# Same shape as docker-compose.yaml without Traefik and the OCR workers; Mongo
+# and media are this project's own volumes and hold only what local/seed
+# writes. local/secret is created on the server (FEMIDA_SECRET_KEY) and is
+# not in git.
+#
+#   docker-compose -f docker-compose.dev.yml up -d
+#
+# File format 2.4 because German runs docker-compose 1.24: no `docker compose`,
+# and depends_on conditions exist only in the 2.x formats there.
+version: '2.4'
+
+services:
+  mongodb:
+    image: mongo:4.2
+    restart: always
+    volumes:
+      - ./mongo/mongod.conf:/etc/mongo/mongod.conf:ro
+      - data:/data/db
+    command: mongod --config /etc/mongo/mongod.conf
+    healthcheck:
+      test: ["CMD", "mongo", "--quiet", "--eval", "db.runCommand({ping: 1}).ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    labels:
+      - traefik.enable=false
+
+  seed:
+    build:
+      context: local/seed
+    environment:
+      - MONGO_HOST=mongodb
+      - RESULTS_FOLDER=/media/ocr_results/
+    volumes:
+      - media:/media
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    restart: "no"
+    labels:
+      - traefik.enable=false
+
+  frontend:
+    build:
+      context: frontend
+    restart: always
+    ports:
+      - "10.0.0.2:8092:80"
+    environment:
+      - MONGO_HOST=mongodb
+    env_file:
+      - local/envfile.local
+      - local/secret
+    volumes:
+      - media:/media/
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    labels:
+      - traefik.enable=false
+
+volumes:
+  data:
+  media:
