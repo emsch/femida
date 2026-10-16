@@ -1,0 +1,44 @@
+name: Deploy to production
+
+on:
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: Full commit SHA to put on /femida (German). Its image must exist in ghcr.
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  packages: read
+
+concurrency: deploy-prod
+
+jobs:
+  deploy-prod:
+    runs-on: ubuntu-latest
+    # The environment carries the prod deploy key and a required reviewer;
+    # the job waits for the approval before any step runs.
+    environment: production
+    steps:
+      - name: Require an image built from this SHA
+        env:
+          SHA: ${{ inputs.sha }}
+          TOKEN: ${{ github.token }}
+        run: |
+          [[ "$SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "sha must be 40 hex chars, got '$SHA'"; exit 1; }
+          echo "$TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          docker manifest inspect "ghcr.io/$GITHUB_REPOSITORY:$SHA" > /dev/null
+
+      - name: Switch /femida to the SHA over ssh
+        env:
+          SSH_KEY: ${{ secrets.GERMAN_PROD_DEPLOY_SSH_KEY }}
+          SHA: ${{ inputs.sha }}
+          HOST_KEY: 95.217.56.169 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIL0dLTwbVayChic5s5ekucLYKP4wrf2dBoeIsouWr3Mv
+        run: |
+          install -m 600 -D /dev/null ~/.ssh/id_ed25519
+          echo "$SSH_KEY" > ~/.ssh/id_ed25519
+          echo "$HOST_KEY" > ~/.ssh/known_hosts
+          # authorized_keys on German pins this key to `femida-deploy prod`
+          # (deploy/femida-deploy.sh); the sha is all the server reads from here.
+          ssh -i ~/.ssh/id_ed25519 -o BatchMode=yes root@95.217.56.169 "$SHA"
