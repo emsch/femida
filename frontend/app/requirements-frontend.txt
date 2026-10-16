@@ -3,3 +3,4 @@ flask_login
 flask_pymongo
 xlsxwriter
 Flask-OAuthlib
+pymongo==3.13.0

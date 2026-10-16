@@ -1,0 +1,13 @@
+# Local stand only. Every value here is fake; nothing in this file is a secret.
+UPLOAD_FOLDER=/media/pdf_uploads/
+RESULTS_FOLDER=/media/ocr_results/
+SERVER_NAME=localhost
+MONGODB_DATABASE=femida
+FEMIDA_DEBUG=1
+FEMIDA_HAND_CHECKS_GAP=10
+FEMIDA_HAND_CHECKS=2
+FEMIDA_LEN_OF_AUDIENCE=3,3
+FEMIDA_SECRET_KEY=local-stand-not-a-secret
+GOOGLE_ID=dev-login-bypass
+GOOGLE_SECRET=dev-login-bypass
+FEMIDA_DEV_LOGIN=dev@femida.local
