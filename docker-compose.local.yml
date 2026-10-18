@@ -1,0 +1,69 @@
+# Local stand. Production is docker-compose.yaml; this file never touches it.
+#
+#   docker compose -f docker-compose.local.yml up --build
+#   open http://127.0.0.1:8082/login
+#
+# Every value in local/envfile.local is fake. Google OAuth is replaced by the
+# dev-only bypass in frontend/app/dev_login.py (FEMIDA_DEV_LOGIN). The seed
+# service fills Mongo with synthetic data once and exits.
+
+services:
+  mongodb:
+    image: mongo:7.0
+    volumes:
+      - ./mongo/mongod.conf:/etc/mongo/mongod.conf:ro
+      - local_mongo_data:/data/db
+    command: mongod --config /etc/mongo/mongod.conf
+    ports:
+      - "127.0.0.1:27017:27017"
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.runCommand({ping: 1}).ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  seed:
+    build:
+      context: local/seed
+    environment:
+      - MONGO_HOST=mongodb
+      - RESULTS_FOLDER=/media/ocr_results/
+    volumes:
+      - ./local/media:/media
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    restart: "no"
+
+  frontend:
+    build:
+      context: frontend
+    platform: linux/amd64
+    env_file:
+      - local/envfile.local
+    environment:
+      - MONGO_HOST=mongodb
+    ports:
+      - "127.0.0.1:8082:80"
+    volumes:
+      - ./local/media:/media
+    depends_on:
+      mongodb:
+        condition: service_healthy
+
+  mongo-express:
+    image: mongo-express:0.54.0
+    platform: linux/amd64
+    profiles: [tools]
+    environment:
+      - ME_CONFIG_MONGODB_SERVER=mongodb
+      - ME_CONFIG_BASICAUTH_USERNAME=femida
+      - ME_CONFIG_BASICAUTH_PASSWORD=femida
+    ports:
+      - "127.0.0.1:8081:8081"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+
+volumes:
+  local_mongo_data:

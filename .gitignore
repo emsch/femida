@@ -116,3 +116,9 @@ results
 local.cfg
 python/tests/out/
 docker/
+
+# local stand: synthetic media written by local/seed
+local/media/
+
+# hosted dev stand: FEMIDA_SECRET_KEY generated on the server
+local/secret

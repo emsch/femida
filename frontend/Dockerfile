@@ -1,5 +1,5 @@
 FROM tiangolo/uwsgi-nginx-flask:python3.6-alpine3.7
-MAINTAINER Maxim Kochurov
+LABEL org.opencontainers.image.authors="Maxim Kochurov"
 
 COPY app/requirements-frontend.txt /tmp/requirements-frontend.txt
 RUN pip3 install --upgrade pip && \

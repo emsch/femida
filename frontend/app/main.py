@@ -61,6 +61,9 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "login"
 
+import dev_login  # noqa  DEV-ONLY bypass, inert unless FEMIDA_DEV_LOGIN is set
+dev_login.refuse_production()
+
 
 google = oauth.remote_app(
     'google',
@@ -290,10 +293,16 @@ def process_updates(form, date, session_id):
 
 
 @app.route('/process_form', methods=['POST'])
+@fresh_login_required
 def handle_data():
     form = dict(request.form.items())
     if not valid_form(form):
         flash(u'ОШИБКА: неверное расширение у файла или название')
+        return redirect(url_for('serve_form'))
+    status = form.get('status')
+    if status not in ('ok', 'manual'):
+        flash(u'ОШИБКА: форма пришла без кнопки «Отправить» или «Ручная проверка» '
+              u'(status=%r), ничего не сохранено' % status)
         return redirect(url_for('serve_form'))
 
     date = datetime.datetime.utcnow()
@@ -307,7 +316,7 @@ def handle_data():
         "type": form.get('type', ''),
         'session_id': session_id, "date": date,
     }
-    if form['status'] == 'manual':
+    if status == 'manual':
         requested_manual = {'session_id': session_id, "date": date, 
                             'comment': form.get('message-text', "")}
     else:
@@ -392,6 +401,9 @@ def handle_pdf():
 
 @app.route('/login')
 def login():
+    if dev_login.enabled():
+        login_user(dev_login.make_user(User), remember=True)
+        return redirect(url_for('serve_form'))
     session.pop('google_token', None)
     return google.authorize(callback=url_for('authorized', _external=True))
 
@@ -417,6 +429,8 @@ def page_not_found(e):
 # callback to reload the user object
 @login_manager.user_loader
 def load_user(userid):
+    if dev_login.enabled():
+        return dev_login.load_user(userid, User)
     # this will logout user if he logouts his Google account
     try:
         me = google.get('userinfo')
